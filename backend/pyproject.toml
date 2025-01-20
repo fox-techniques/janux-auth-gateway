@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "JANUX-backend"
+version = "0.1.0"
+description = "Backend microservice of JANUX-auth-gateway for authentication and user management"
+authors = ["Ali Nabbi <ali.nabbi@fox-techniques.com>"]
+license = "Apache License 2.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = {extras = ["standard"], version = "^0.115.6"}
+uvicorn = "^0.34.0"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+start = "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
