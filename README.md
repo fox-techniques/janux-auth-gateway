@@ -1,1 +1,1 @@
-# janus-auth-gateway
+# JANUX-auth-gateway
