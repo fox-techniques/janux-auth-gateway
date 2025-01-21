@@ -9,6 +9,8 @@ from app.errors.handlers import (
 )
 from app.logging.requests import log_requests
 from app.routers import base_router
+from app.routers.user_router import user_router
+
 from app.logging.custom_logger import get_logger
 
 logger = get_logger("app_logger")
@@ -26,7 +28,7 @@ async def lifespan(app: FastAPI):
 
 
 # Create FastAPI instance with lifespan
-app = FastAPI(title="JANUS Backend", lifespan=lifespan)
+app = FastAPI(title="JANUX Backend", lifespan=lifespan)
 
 # Middleware
 app.add_middleware(
@@ -44,6 +46,7 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 # Routes
 app.include_router(base_router)
+app.include_router(user_router, prefix="/users", tags=["Users"])
 
 # Add __main__ block
 if __name__ == "__main__":
