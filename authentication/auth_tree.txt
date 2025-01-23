@@ -1,0 +1,43 @@
+.
+├── app
+│   ├── auth
+│   │   ├── __init__.py
+│   │   ├── jwt.py
+│   │   └── passwords.py
+│   ├── database
+│   │   └── mongoDB.py
+│   ├── dependencies
+│   │   └── __init__.py
+│   ├── errors
+│   │   ├── handlers.py
+│   │   └── __init__.py
+│   ├── __init__.py
+│   ├── logging
+│   │   ├── config.py
+│   │   ├── custom_logger.py
+│   │   ├── __init__.py
+│   │   └── requests.py
+│   ├── main.py
+│   ├── models
+│   │   └── __init__.py
+│   ├── routers
+│   │   ├── auth_router.py
+│   │   ├── base_router.py
+│   │   ├── __init__.py
+│   │   └── user_router.py
+│   ├── schemas
+│   │   ├── __init__.py
+│   │   ├── response.py
+│   │   ├── token.py
+│   │   └── user.py
+│   └── utils
+│       └── __init__.py
+├── auth_tree.txt
+├── Dockerfile
+├── logs
+│   └── app.log
+├── poetry.lock
+├── pyproject.toml
+└── README.md
+
+11 directories, 29 files

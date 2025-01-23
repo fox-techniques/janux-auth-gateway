@@ -1,0 +1,34 @@
+# Ignore local uploads
+uploads/
+
+# Ignore cache and checkpoints
+**/.ipynb_checkpoints/
+**/.vscode/
+
+# Ignore all __pycache__ directories
+**/__pycache__/
+__pycache__
+
+# Ignore Python bytecode
+*.py[cod]
+.Python
+
+# Ignore directories for Python virtual environments
+**/.venv/
+.venv/
+.env/
+venv/
+env/
+
+# Ignore Git directory and metadata
+**/.git/
+.git/
+.gitignore
+
+# Ignore Dockerfile and .dockerignore to keep the image clean
+Dockerfile
+.dockerignore
+
+# Optionally ignore other files/directories that are not needed in the Docker image
+README.md
+*.md
