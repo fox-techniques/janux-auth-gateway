@@ -12,3 +12,8 @@ class UserCreate(UserBase):
 
 class UserResponse(UserBase):
     id: str
+
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str

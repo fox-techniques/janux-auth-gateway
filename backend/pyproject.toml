@@ -11,8 +11,10 @@ python = "^3.10"
 fastapi = {extras = ["standard"], version = "^0.115.6"}
 uvicorn = "^0.34.0"
 pymongo = "^4.10.1"
-passlib = "^1.7.4"
 bcrypt = "^4.2.1"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+passlib = "^1.7.4"
+python-multipart = "^0.0.20"
 
 
 [tool.poetry.group.dev.dependencies]

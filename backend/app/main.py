@@ -7,9 +7,16 @@ from app.errors.handlers import (
     http_exception_handler,
     validation_exception_handler,
 )
+from fastapi.security import OAuth2PasswordBearer
+from fastapi.openapi.models import OAuthFlows as OAuthFlowsModel
+from fastapi.openapi.models import SecurityScheme as SecuritySchemeModel
+
 from app.logging.requests import log_requests
+
 from app.routers import base_router
 from app.routers.user_router import user_router
+
+# from app.routers.auth_router import auth_router
 
 from app.logging.custom_logger import get_logger
 
@@ -45,8 +52,9 @@ app.add_exception_handler(Exception, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 # Routes
-app.include_router(base_router)
+app.include_router(base_router, tags=["Default"])
 app.include_router(user_router, prefix="/users", tags=["Users"])
+# app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 
 # Add __main__ block
 if __name__ == "__main__":

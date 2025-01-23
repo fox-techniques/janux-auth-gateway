@@ -1,6 +1,9 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+
+from starlette import status
+
 from app.logging.custom_logger import get_logger
 
 logger = get_logger("app_logger")
@@ -10,12 +13,12 @@ def register_error_handlers(app: FastAPI):
     @app.exception_handler(Exception)
     async def generic_exception_handler(request: Request, exc: Exception):
         return JSONResponse(
-            status_code=500,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"message": "An unexpected error occurred."},
         )
 
 
-async def http_exception_handler(request: Request, exc: HTTPException):
+async def http_exception_handler(request: Request, exc: Exception):
     """
     Exception handler for HTTP exceptions raised during request processing.
 
@@ -29,8 +32,17 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     Returns:
         JSONResponse: A JSON response that includes the error detail and the HTTP status code.
     """
-    logger.error(f"HTTPException: {exc.detail}", exc_info=True)
-    return JSONResponse(content={"detail": exc.detail}, status_code=exc.status_code)
+    # Log the exception
+    logger.error(f"Exception occurred: {str(exc)}", exc_info=True)
+
+    # Return a generic error response if detail is missing
+    detail = getattr(exc, "detail", "An unexpected error occurred")
+    status_code = getattr(exc, "status_code", 500)
+
+    return JSONResponse(
+        content={"detail": detail},
+        status_code=status_code,
+    )
 
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
