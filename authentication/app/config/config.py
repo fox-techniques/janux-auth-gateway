@@ -27,6 +27,8 @@ class Config:
     # MongoDB connection URI
     MONGO_URI = os.getenv("MONGO_URI")
     MONGO_DATABASE_NAME = os.getenv("MONGO_DATABASE_NAME")
+    MONGO_SUPER_ADMIN_EMAIL = os.getenv("MONGO_SUPER_ADMIN_EMAIL")
+    MONGO_SUPER_ADMIN_PASSWORD = os.getenv("MONGO_SUPER_ADMIN_PASSWORD")
 
     @staticmethod
     def validate():
