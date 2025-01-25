@@ -31,6 +31,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = Config.ACCESS_TOKEN_EXPIRE_MINUTES
 
 # OAuth2 Bearer configuration
 oauth2_bearer = OAuth2PasswordBearer(tokenUrl="/users/login")
+admin_oauth2_bearer = OAuth2PasswordBearer(tokenUrl="/admins/login")
 
 
 def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
@@ -93,5 +94,41 @@ def get_current_user(token: str = Depends(oauth2_bearer)) -> dict:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+def get_current_admin(token: str = Depends(admin_oauth2_bearer)) -> dict:
+    """
+    Decodes and validates the JWT token to retrieve the current admin's information.
+
+    Args:
+        token (str): The JWT token provided by the client.
+
+    Returns:
+        dict: The decoded admin information (e.g., username, ID).
+
+    Raises:
+        HTTPException: If the token is invalid or admin data is missing.
+    """
+    logger.info("Getting current admin...")
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        user_id: str = payload.get("id")
+
+        if not username:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate admin",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return {"username": username, "id": user_id}
+    except JWTError as e:
+        logger.error(f"JWT decoding error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate admin credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )

@@ -8,19 +8,29 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 Date: [Insert Date]
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer
 from app.errors.handlers import register_error_handlers
 from app.logging.requests import log_requests
 from app.routers.base_router import base_router
-from app.routers.admin_router import admin_router
 from app.routers.user_router import user_router
-from app.logging.custom_logger import get_logger
+from app.routers.admin_router import admin_router
 from app.database.mongoDB import init_db
+from app.logging.custom_logger import get_logger
+from typing import Annotated
 
 # Initialize the logger
 logger = get_logger("app_logger")
 logger.info("--- JANUX Authentication service starts here ------------------------")
+
+# User and Admin OAuth2 Schemes
+user_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login")
+admin_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/admins/login")
+
+# Annotated dependencies for better reusability
+UserDependency = Annotated[str, Depends(user_oauth2_scheme)]
+AdminDependency = Annotated[str, Depends(admin_oauth2_scheme)]
 
 
 async def lifespan(app: FastAPI):
@@ -36,11 +46,13 @@ async def lifespan(app: FastAPI):
     Yields:
         None
     """
-    logger.info("JANUX Authentication application is starting up...")
+    logger.info("JANUX Authentication Application is starting up...")
+
+    # Initialize database connection
     logger.info("Initializing database connection...")
     await init_db()
     yield
-    logger.info("JANUX Authentication application is shutting down...")
+    logger.info("JANUX Authentication Application is shutting down...")
 
 
 # Create the FastAPI application instance
@@ -63,9 +75,8 @@ register_error_handlers(app)
 
 # Register application routes
 app.include_router(base_router, tags=["Default"])
-app.include_router(admin_router, prefix="/admin", tags=["Admin"])
 app.include_router(user_router, prefix="/users", tags=["Users"])
-
+app.include_router(admin_router, prefix="/admins", tags=["Admins"])
 
 # Run the application if executed directly
 if __name__ == "__main__":

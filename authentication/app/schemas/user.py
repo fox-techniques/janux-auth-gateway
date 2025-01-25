@@ -24,8 +24,8 @@ class UserBase(BaseModel):
         full_name (str): The full name of the user.
     """
 
-    email: EmailStr = Field(..., example="john.smith@janux.com")
-    full_name: str = Field(..., example="John Smith")
+    email: EmailStr = Field(..., example="jane.doe@example.com")
+    full_name: str = Field(..., example="Jane Doe")
 
 
 class UserCreate(UserBase):
@@ -39,7 +39,7 @@ class UserCreate(UserBase):
         password (str): The plain-text password for the user.
     """
 
-    password: str = Field(..., min_length=8, example="SecurePassword123!")
+    password: str = Field(..., min_length=8, example="Passw0rd123!")
 
 
 class UserResponse(UserBase):
@@ -65,5 +65,5 @@ class UserLogin(BaseModel):
         password (str): The plain-text password for the user.
     """
 
-    email: EmailStr = Field(..., example="john.smith@janux.com")
-    password: str = Field(..., min_length=8, example="SecurePassword123!")
+    email: EmailStr = Field(..., example="jane.doe@example.com")
+    password: str = Field(..., min_length=8, example="Passw0rd123!")

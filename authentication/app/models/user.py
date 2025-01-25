@@ -24,10 +24,12 @@ class User(Document):
         created_at (datetime): The timestamp of when the user was created.
     """
 
-    email: EmailStr = Field(..., unique=True, example="john.smith@janux.com")
-    full_name: str = Field(..., example="John Smith")
-    hashed_password: str = Field(..., example="hashed_password_123")
-    role: Literal["user", "admin"] = Field(default="user", example="user")
+    email: EmailStr = Field(..., unique=True, example="jane.doe@example.com")
+    full_name: str = Field(..., example="Jane Doe")
+    hashed_password: str = Field(..., example="Passw0rd123!")
+    role: Literal["user", "contributor", "maintainer", "tester"] = Field(
+        default="user", example="user"
+    )
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     class Settings:
@@ -44,9 +46,9 @@ class User(Document):
 
         json_schema_extra = {
             "example": {
-                "email": "john.smith@janux.com",
-                "full_name": "John Smith",
-                "hashed_password": "hashed_password_123",
+                "email": "jane.doe@example.com",
+                "full_name": "Jane Doe",
+                "hashed_password": "Passw0rd123!",
                 "role": "user",
                 "created_at": "2025-01-23T12:00:00Z",
             }
