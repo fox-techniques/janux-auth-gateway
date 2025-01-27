@@ -76,49 +76,6 @@ async def register_user(user: UserCreate):
     )
 
 
-@user_router.post("/login")
-async def login_user(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends(get_current_user)]
-):
-    """
-    Log in a user by validating their credentials and generating a JWT token.
-
-    Args:
-        form_data (OAuth2PasswordRequestForm): The login credentials (username as email and password).
-
-    Returns:
-        dict: The access token and its type.
-
-    Raises:
-        HTTPException: If the credentials are invalid.
-    """
-    logger.info(f"Login endpoint accessed for email: {form_data.username}")
-
-    # Extract credentials
-    email = form_data.username  # OAuth2PasswordRequestForm uses 'username' for email
-    password = form_data.password
-
-    # Authenticate user
-    user = await authenticate_user(email, password)
-    if not user:
-        logger.warning(f"Login failed for email: {email}. Invalid credentials.")
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # Generate access token
-    access_token = create_access_token(
-        data={"sub": email},
-        expires_delta=timedelta(minutes=Config.ACCESS_TOKEN_EXPIRE_MINUTES),
-    )
-
-    logger.info(f"Login successful for email: {email}")
-
-    return {"access_token": access_token, "token_type": "bearer"}
-
-
 @user_router.get("/profile")
 async def get_profile(current_user: UserDependency):
     """

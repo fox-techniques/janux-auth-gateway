@@ -36,48 +36,6 @@ AdminDependency = Annotated[dict, Depends(get_current_admin)]
 admin_router = APIRouter()
 
 
-@admin_router.post("/login")
-async def login_admin(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
-    """
-    Log in an admin by validating their credentials and generating a JWT token.
-
-    Args:
-        form_data (OAuth2PasswordRequestForm): The login credentials (username as email and password).
-
-    Returns:
-        dict: The access token and its type.
-
-    Raises:
-        HTTPException: If the credentials are invalid.
-    """
-    logger.info(f"Admin login endpoint accessed for email: {form_data.username}")
-
-    # Extract credentials
-    email = form_data.username  # OAuth2PasswordRequestForm uses 'username' for email
-    password = form_data.password
-
-    # Authenticate admin
-    admin = await Admin.find_one(Admin.email == email)
-
-    if not admin or not verify_password(password, admin.hashed_password):
-        logger.warning(f"Login failed for admin email: {email}. Invalid credentials.")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid admin email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # Generate access token
-    access_token = create_access_token(
-        data={"sub": email},
-        expires_delta=timedelta(minutes=Config.ACCESS_TOKEN_EXPIRE_MINUTES),
-    )
-
-    logger.info(f"Admin login successful for email: {email}")
-
-    return {"access_token": access_token, "token_type": "bearer"}
-
-
 @admin_router.get("/users", response_model=List[UserResponse])
 async def list_users(current_admin: AdminDependency):
     """
