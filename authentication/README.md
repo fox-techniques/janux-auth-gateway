@@ -1,4 +1,11 @@
-# Getting Started with FastAPI
+# JANUX Authentication Microservice
+
+This is the authentication microservice for the JANUX platform.
+
+## Features
+- User registration
+- Authentication with JWT
+- Role-based access control
 
 ## Available Scripts
 

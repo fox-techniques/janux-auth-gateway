@@ -1,10 +1,54 @@
-version: '3.9'
 services:
-  mongodb:
-    image: mongo:latest
-    container_name: mongodb
+
+  auth-db:
+    image: mongo:5.0
+    container_name: auth-db
     ports:
-      - "27017:27017"
+      - "27018:27017"
+    environment:
+      MONGO_INITDB_DATABASE: auth_db
     volumes:
-      - ./mongo-data:/data/db
-    restart: always
+      - auth_db_data:/data/db
+  authentication:
+    build:
+      context: .
+      dockerfile: ./authentication/Dockerfile
+      
+    container_name: authentication-service
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGO_URI=mongodb://auth-db:27017
+      - MONGO_DATABASE_NAME=auth_db
+      - AUTH_SECRET_KEY=your-secret-key-1234567890abcdef
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - MONGO_SUPER_ADMIN_EMAIL=admin@example.com
+      - MONGO_SUPER_ADMIN_PASSWORD=superadminpassword
+    depends_on:
+      - auth-db
+  # feedback-db:
+  #   image: mongo:5.0
+  #   container_name: feedback-db
+  #   ports:
+  #     - "27019:27017"
+  #   environment:
+  #     MONGO_INITDB_DATABASE: feedback_db
+  #   volumes:
+  #     - feedback_db_data:/data/db
+  # feedback:
+  #   build:
+  #     context: ./feedback
+  #   container_name: feedback-service
+  #   ports:
+  #     - "8001:8001"
+  #   environment:
+  #     - MONGO_URI=mongodb://feedback-db:27017
+  #     - MONGO_DATABASE_NAME=feedback_db
+  #     - AUTH_SERVICE_URL=http://authentication-service:8000
+  #   depends_on:
+  #     - feedback-db
+  #     - authentication
+
+volumes:
+  auth_db_data:
+  # feedback_db_data:

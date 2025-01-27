@@ -1,10 +1,11 @@
 [tool.poetry]
-name = "JANUX-authentication"
+name = "JANUX-auth-gateway"
 version = "0.1.0"
 description = "Authentication microservice of JANUX-auth-gateway for user management"
 authors = ["FOX Techniques <ali.nabbi@fox-techniques.com>"]
 license = "Apache License 2.0"
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.10"
