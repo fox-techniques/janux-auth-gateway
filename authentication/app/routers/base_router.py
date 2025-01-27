@@ -7,6 +7,11 @@ Endpoints:
 - `/`: Root endpoint to welcome users.
 - `/health`: Health check endpoint to verify service status.
 
+Features:
+- Lightweight and essential routes for service interaction.
+- Provides a health check mechanism to monitor service availability.
+- Detailed logging for basic interactions.
+
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 

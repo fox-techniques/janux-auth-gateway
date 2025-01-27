@@ -9,6 +9,10 @@ Schemas:
 - `UserResponse`: Schema for user response data.
 - `UserLogin`: Schema for user login credentials.
 
+Features:
+- Provides standardized representation for user operations.
+- Includes validation and examples for API documentation.
+
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
@@ -62,7 +66,7 @@ class UserLogin(BaseModel):
 
     Attributes:
         email (EmailStr): The email address of the user.
-        password (str): The plain-text password for the user.
+        password (str): The plain-text password of the user.
     """
 
     email: EmailStr = Field(..., example="jane.doe@example.com")

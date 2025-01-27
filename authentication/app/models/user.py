@@ -3,6 +3,11 @@ user.py
 
 Defines the User model for MongoDB using Beanie, with support for roles.
 
+Features:
+- Stores user details such as email, full name, hashed password, and role.
+- Automatically sets the creation timestamp for new users.
+- Uses unique constraints and Pydantic for validation.
+
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
@@ -20,7 +25,7 @@ class User(Document):
         email (EmailStr): The email address of the user.
         full_name (str): The full name of the user.
         hashed_password (str): The hashed password for the user.
-        role (str): The role of the user (e.g., "user", "admin").
+        role (Literal): The role of the user (e.g., "user", "contributor", "maintainer", "tester").
         created_at (datetime): The timestamp of when the user was created.
     """
 
@@ -53,3 +58,12 @@ class User(Document):
                 "created_at": "2025-01-23T12:00:00Z",
             }
         }
+
+    def __str__(self) -> str:
+        """
+        String representation of the User instance for logging and debugging.
+
+        Returns:
+            str: A string representing the user's email and role.
+        """
+        return f"User(email={self.email}, role={self.role})"

@@ -9,21 +9,21 @@ Endpoints:
 - `/users/{user_id}`: Delete a user by ID (Admin only).
 - `/profile`: Retrieve the profile of the currently authenticated admin.
 
+Features:
+- Role-based access for admin operations.
+- Secure password handling and validation.
+- Detailed logging for all admin operations.
+
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
 from fastapi import APIRouter, HTTPException, Depends
-from fastapi.security import OAuth2PasswordRequestForm
 from starlette import status
 from typing import Annotated, List
-from datetime import timedelta
 
 from app.schemas.user import UserResponse
-from app.auth.passwords import verify_password
-from app.auth.jwt import create_access_token, get_current_admin
-from app.models.admin import Admin
+from app.auth.jwt import get_current_admin
 from app.models.user import User
-from app.config import Config
 from app.logging.custom_logger import get_logger
 
 # Initialize logger
@@ -67,6 +67,9 @@ async def delete_user(user_id: str, current_admin: AdminDependency):
 
     Returns:
         dict: A confirmation message.
+
+    Raises:
+        HTTPException: If the user ID does not exist.
     """
     logger.info(
         f"Admin deletion endpoint accessed by: {current_admin['username']} for user ID: {user_id}"

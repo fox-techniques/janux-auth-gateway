@@ -4,6 +4,12 @@ main.py
 Entry point for the JANUX Authentication microservice. This file initializes the FastAPI app, sets up middleware,
 exception handlers, routes, and establishes the MongoDB connection using Beanie.
 
+Features:
+- Middleware for request logging.
+- Custom exception handlers for consistent error responses.
+- Modular route inclusion for base, auth, user, and admin APIs.
+- MongoDB initialization with Beanie ODM.
+
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 

@@ -8,21 +8,22 @@ Endpoints:
 - `/login`: Authenticate a user and return a JWT token.
 - `/profile`: Retrieve the profile of the currently authenticated user.
 
+Features:
+- Secure password handling and validation.
+- Role-based access for user operations.
+- Detailed logging for all operations.
+
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
 from fastapi import APIRouter, HTTPException, Depends
-from fastapi.security import OAuth2PasswordRequestForm
 from starlette import status
-from datetime import timedelta
 from typing import Annotated
 
 from app.schemas.user import UserCreate, UserResponse
 from app.schemas.response import ConflictResponse
 from app.auth.passwords import hash_password
-from app.database.mongoDB import authenticate_user, username_exists
-from app.auth.jwt import create_access_token, get_current_user
-from app.config import Config
+from app.auth.jwt import get_current_user
 from app.models.user import User
 from app.logging.custom_logger import get_logger
 
@@ -47,6 +48,15 @@ user_router = APIRouter()
 async def register_user(user: UserCreate):
     """
     Register a new user using Beanie for database operations.
+
+    Args:
+        user (UserCreate): The user data for registration.
+
+    Returns:
+        UserResponse: The created user's response data.
+
+    Raises:
+        HTTPException: If the email is already registered.
     """
     logger.info(f"Register endpoint accessed for email: {user.email}")
 

@@ -14,6 +14,7 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
 from pymongo.errors import ServerSelectionTimeoutError, OperationFailure
+from typing import Optional
 
 from app.auth.passwords import verify_password
 from app.config import Config
@@ -21,14 +22,17 @@ from app.logging.custom_logger import get_logger
 from app.models.user import User
 from app.models.admin import Admin
 
-
 # Initialize logger
 logger = get_logger("app_logger")
 
 
-async def init_db():
+async def init_db() -> None:
     """
     Initialize the MongoDB database connection with Beanie.
+
+    Raises:
+        ServerSelectionTimeoutError: If the MongoDB server is not reachable.
+        OperationFailure: If authentication to MongoDB fails.
     """
     try:
         # MongoDB connection URI (from configuration)
@@ -42,19 +46,7 @@ async def init_db():
         logger.info("Connected to MongoDB and initialized Beanie successfully.")
 
         # Ensure at least one admin exists
-        admin_email = Config.MONGO_SUPER_ADMIN_EMAIL
-        existing_admin = await Admin.find_one(Admin.email == admin_email)
-        if not existing_admin:
-            from app.auth.passwords import hash_password
-
-            admin = Admin(
-                email=admin_email,
-                full_name="Super Admin",
-                hashed_password=hash_password(Config.MONGO_SUPER_ADMIN_PASSWORD),
-                role="super_admin",
-            )
-            await admin.insert()
-            logger.info(f"Default admin account created: {admin_email}")
+        await ensure_super_admin_exists()
 
     except ServerSelectionTimeoutError as se:
         logger.error(f"MongoDB server selection failed: {se}")
@@ -62,6 +54,35 @@ async def init_db():
     except OperationFailure as oe:
         logger.error(f"MongoDB authentication failed: {oe}")
         raise
+
+
+async def ensure_super_admin_exists() -> None:
+    """
+    Ensure that a default super admin account exists in the database.
+    If not, it creates one.
+
+    Raises:
+        ValueError: If required configuration values are missing.
+    """
+    admin_email = Config.MONGO_SUPER_ADMIN_EMAIL
+    admin_password = Config.MONGO_SUPER_ADMIN_PASSWORD
+
+    if not admin_email or not admin_password:
+        logger.error("Super admin email or password is not configured.")
+        raise ValueError("Super admin email or password is not configured.")
+
+    existing_admin = await Admin.find_one(Admin.email == admin_email)
+    if not existing_admin:
+        from app.auth.passwords import hash_password
+
+        admin = Admin(
+            email=admin_email,
+            full_name="Super Admin",
+            hashed_password=hash_password(admin_password),
+            role="super_admin",
+        )
+        await admin.insert()
+        logger.info(f"Default admin account created: {admin_email}")
 
 
 async def authenticate_user(username: str, password: str) -> bool:
@@ -77,23 +98,26 @@ async def authenticate_user(username: str, password: str) -> bool:
     """
     logger.info("Authenticating user...")
 
-    # Check if the username exists in the database
-    user = await username_exists(username)
+    try:
+        user = await username_exists(username)
 
-    if not user:
-        logger.warning("Username does not exist.")
+        if not user:
+            logger.warning("Username does not exist.")
+            return False
+
+        if not verify_password(password, user.hashed_password):
+            logger.warning("Password verification failed.")
+            return False
+
+        logger.info("User authenticated successfully.")
+        return True
+
+    except Exception as e:
+        logger.error(f"Error during user authentication: {e}")
         return False
 
-    # Check if the password matches the hashed password in the database
-    if not verify_password(password, user.hashed_password):
-        logger.warning("Password verification failed.")
-        return False
 
-    logger.info("User authenticated successfully.")
-    return True
-
-
-async def username_exists(username: str) -> User:
+async def username_exists(username: str) -> Optional[User]:
     """
     Check if a username exists in the database.
 
@@ -101,12 +125,11 @@ async def username_exists(username: str) -> User:
         username (str): The user's email or username to search for.
 
     Returns:
-        User: The user's data if the username exists, None otherwise.
+        Optional[User]: The user's data if the username exists, None otherwise.
     """
     logger.info("Checking if username exists...")
 
     try:
-        # Find the user in the database using Beanie
         user = await User.find_one(User.email == username)
         if not user:
             logger.info("Username not found in the database.")
@@ -132,22 +155,25 @@ async def authenticate_admin(username: str, password: str) -> bool:
     """
     logger.info("Authenticating admin...")
 
-    # Check if the username exists in the database
-    user = await admin_username_exists(username)
-    if not user:
-        logger.warning("Admin username does not exist.")
+    try:
+        admin = await admin_username_exists(username)
+        if not admin:
+            logger.warning("Admin username does not exist.")
+            return False
+
+        if not verify_password(password, admin.hashed_password):
+            logger.warning("Admin password verification failed.")
+            return False
+
+        logger.info("Admin authenticated successfully.")
+        return True
+
+    except Exception as e:
+        logger.error(f"Error during admin authentication: {e}")
         return False
 
-    # Check if the password matches the hashed password in the database
-    if not verify_password(password, user.hashed_password):
-        logger.warning("Admin password verification failed.")
-        return False
 
-    logger.info("Admin authenticated successfully.")
-    return True
-
-
-async def admin_username_exists(username: str) -> Admin:
+async def admin_username_exists(username: str) -> Optional[Admin]:
     """
     Check if an admin's username exists in the database.
 
@@ -155,12 +181,11 @@ async def admin_username_exists(username: str) -> Admin:
         username (str): The admin's email or username to search for.
 
     Returns:
-        Admin: The admin's data if the username exists, None otherwise.
+        Optional[Admin]: The admin's data if the username exists, None otherwise.
     """
     logger.info("Checking if admin username exists...")
 
     try:
-        # Find the user in the database using Beanie
         admin = await Admin.find_one(Admin.email == username)
         if not admin:
             logger.info("Admin username not found in the database.")

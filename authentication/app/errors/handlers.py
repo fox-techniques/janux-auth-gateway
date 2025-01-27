@@ -3,12 +3,10 @@ handlers.py
 
 Custom error handlers for the FastAPI application.
 
-This module defines handlers for:
-- Generic exceptions (500 Internal Server Error).
-- HTTP exceptions.
-- Validation errors (422 Unprocessable Entity).
-
-These handlers ensure consistent error responses across the application and log useful debugging information.
+Features:
+- Handles unexpected exceptions (500 Internal Server Error).
+- Handles HTTP exceptions and validation errors consistently.
+- Logs detailed error information for debugging.
 
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
@@ -23,7 +21,7 @@ from app.logging.custom_logger import get_logger
 logger = get_logger("app_logger")
 
 
-def register_error_handlers(app: FastAPI):
+def register_error_handlers(app: FastAPI) -> None:
     """
     Register custom error handlers with the FastAPI application.
 

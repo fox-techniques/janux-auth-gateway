@@ -32,6 +32,11 @@ def hash_password(password: str) -> str:
         str: The securely hashed password.
     """
     logger.info("Hashing password...")
+
+    if not password or len(password.strip()) == 0:
+        logger.error("Password cannot be empty.")
+        raise ValueError("Password cannot be empty.")
+
     return bcrypt_context.hash(password)
 
 
@@ -47,4 +52,13 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         bool: True if the password matches, False otherwise.
     """
     logger.info("Verifying password against hashed password...")
+
+    if not plain_password or len(plain_password.strip()) == 0:
+        logger.error("Plain password cannot be empty.")
+        return False
+
+    if not hashed_password or len(hashed_password.strip()) == 0:
+        logger.error("Hashed password cannot be empty.")
+        return False
+
     return bcrypt_context.verify(plain_password, hashed_password)

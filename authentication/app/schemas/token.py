@@ -6,6 +6,10 @@ Defines Pydantic schema for token-related data.
 Schemas:
 - `Token`: Schema for access tokens.
 
+Features:
+- Standardized representation of JWT tokens.
+- Example values for better API documentation.
+
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
