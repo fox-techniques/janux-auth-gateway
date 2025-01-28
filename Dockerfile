@@ -6,7 +6,7 @@ FROM python:3.10-slim
 # Here, we ensure the working directory is explicitly set to where we intend to copy our application code.
 WORKDIR /app
 
-COPY ./authentication/pyproject.toml ./authentication/poetry.lock ./authentication/README.md ./
+COPY ./pyproject.toml ./poetry.lock ./README.md ./
 
 RUN pip install poetry \
     && poetry config virtualenvs.create false \  
@@ -15,13 +15,13 @@ RUN pip install poetry \
 # Now copy the rest of your application code. This is done after the dependencies are installed
 # to avoid invalidating Docker's cache every time any file changes, only the dependencies need reinstallation
 
-COPY ./authentication/app ./app
+COPY ./janux_auth_gateway ./app
 
 # Make port 8000 available to the world outside this container
 EXPOSE 8000
 
 # Define environment variable
-ENV NAME FastAPI-Auth
+ENV NAME JANUX-Auth-Gateway
 
 # Run app.py when the container launches. Ensure the working directory is correctly set
 # to where your application code resides, hence the WORKDIR command above is crucial.
