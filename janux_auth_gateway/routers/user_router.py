@@ -1,0 +1,75 @@
+"""
+user_router.py
+
+Defines user-related API routes, including registration and profile retrieval.
+
+Endpoints:
+- `/register`: Register a new user.
+- `/profile`: Retrieve the profile of the currently authenticated user.
+
+Features:
+- Secure password handling and validation.
+- Role-based access for user operations.
+- Detailed logging for all operations.
+
+Author: FOX Techniques <ali.nabbi@fox-techniques.com>
+"""
+
+from fastapi import APIRouter, HTTPException, Depends
+from starlette import status
+from typing import Annotated
+from janux_auth_gateway.schemas.user import UserCreate, UserResponse
+from janux_auth_gateway.auth.passwords import hash_password
+from janux_auth_gateway.auth.jwt import get_current_user
+from janux_auth_gateway.models.user import User
+from janux_auth_gateway.logging.custom_logger import get_logger
+
+# Initialize logger
+logger = get_logger("auth_service_logger")
+
+# User OAuth2 dependency
+UserDependency = Annotated[dict, Depends(get_current_user)]
+
+# Initialize router
+user_router = APIRouter()
+
+
+@user_router.post(
+    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+)
+async def register_user(user: UserCreate):
+    """
+    Register a new user using Beanie for database operations.
+
+    Args:
+        user (UserCreate): The user data for registration.
+
+    Returns:
+        UserResponse: The created user's response data.
+
+    Raises:
+        HTTPException: If the email is already registered.
+    """
+    logger.info(f"Register endpoint accessed for email: {user.email}")
+
+    # Check if the user already exists
+    existing_user = await User.find_one(User.email == user.email)
+    if existing_user:
+        logger.warning(f"Email {user.email} is already registered.")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email already registered.",
+        )
+
+    hashed_password = hash_password(user.password)
+    new_user = User(
+        email=user.email,
+        full_name=user.full_name,
+        hashed_password=hashed_password,
+    )
+    await new_user.insert()
+
+    logger.info(f"User {user.email} registered successfully.")
+    return UserResponse(
+        id=str(new_user.id), email=new_user.email, full_name=new_user.full_name
+    )

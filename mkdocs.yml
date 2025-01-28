@@ -1,0 +1,73 @@
+site_name: JANUX Authentiocation Gateway
+theme: 
+  features:
+    - navigation.footer
+    - search.suggest
+    - content.footnote.tooltips
+    - content.code.copy
+    - content.code.select
+    - content.code.annotate
+
+  name: material
+  logo: assets/janux-favicon.png
+  favicon: assets/janux-favicon.png
+  palette:
+    # Light Mode
+    - scheme: default
+      toggle:
+        icon: material/brightness-4
+        name: Light mode
+      primary: blue grey
+      accent: deep orange
+    
+    # Dark Mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-7
+        name: Dark mode
+      primary: teal
+      accent: cyan
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Support: SUPPORT.md
+  - Contributing: CONTRIBUTING.md
+  - Code of Conduct: CODE_OF_CONDUCT.md
+  - Security Policies: SECURITY.md
+  - License: LICENSE.md
+
+extra:
+  social:
+    - icon: fontawesome/solid/envelope
+      link: mailto:contact@fox-techniques.com?subject=Inquiry%20about%20JANUX-Authentication-Gateway
+    - icon: fontawesome/brands/github
+      link: https://github.com/fox-techniques/janux-auth-gateway
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/TcCxxSXtaH
+    - icon: fontawesome/brands/x-twitter
+      link: https://x.com/foxtechniques/
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/company/fox-techniques/
+
+copyright: Copyright &copy; 2025 FOX Techniques
+
+markdown_extensions:
+  - tables
+  - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - toc
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - footnotes
