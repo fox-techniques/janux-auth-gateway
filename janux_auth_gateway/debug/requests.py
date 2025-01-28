@@ -12,7 +12,7 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
 from fastapi import Request
-from app.logging.custom_logger import get_logger
+from janux_auth_gateway.debug.custom_logger import get_logger
 
 import time
 

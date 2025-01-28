@@ -16,9 +16,9 @@ from beanie import init_beanie
 from pymongo.errors import ServerSelectionTimeoutError, OperationFailure
 from typing import Optional
 
-from janux_auth_gateway.auth.passwords import verify_password
+from janux_auth_gateway.auth.passwords import verify_password, hash_password
 from janux_auth_gateway.config import Config
-from janux_auth_gateway.logging.custom_logger import get_logger
+from janux_auth_gateway.debug.custom_logger import get_logger
 from janux_auth_gateway.models.user import User
 from janux_auth_gateway.models.admin import Admin
 
@@ -31,35 +31,47 @@ async def init_db() -> None:
     Initialize the MongoDB database connection with Beanie.
 
     Raises:
-        RuntimeError: If MongoDB is not reachable.
+        SystemExit: If the MongoDB server is not reachable or authentication fails.
     """
     try:
-        logger.info("Connecting to MongoDB...")
-        client = AsyncIOMotorClient(Config.MONGO_URI)
+        # MongoDB connection URI
+        MONGO_URI = Config.MONGO_URI
+        client = AsyncIOMotorClient(
+            MONGO_URI, serverSelectionTimeoutMS=5000
+        )  # 5-second timeout
         db = client[Config.MONGO_DATABASE_NAME]
 
-        # Initialize Beanie with the User and Admin models
+        # Attempt to connect and list databases (to check connectivity)
+        logger.info("Testing MongoDB connection...")
+        await client.server_info()  # This raises an exception if the server is unreachable
+
+        # Initialize Beanie with User and Admin models
         await init_beanie(database=db, document_models=[User, Admin])
 
-        logger.info("MongoDB connection and Beanie initialization successful.")
+        logger.info("Connected to MongoDB and initialized Beanie successfully.")
         await ensure_super_admin_exists()
-    except ServerSelectionTimeoutError as e:
-        logger.error(f"MongoDB connection timed out: {e}")
-        raise RuntimeError("Could not connect to MongoDB. Please ensure it is running.")
-    except OperationFailure as e:
-        logger.error(f"MongoDB authentication failed: {e}")
-        raise RuntimeError("Authentication to MongoDB failed. Check credentials.")
-    except Exception as e:
-        logger.error(f"Error initializing MongoDB: {e}")
-        raise RuntimeError(
-            "An unexpected error occurred during database initialization."
+
+    except ServerSelectionTimeoutError as timeout_error:
+        logger.critical("Failed to connect to MongoDB: Timeout reached.")
+        logger.critical(f"Error: {timeout_error}")
+        raise SystemExit("MongoDB connection timeout. Application cannot start.")
+
+    except OperationFailure as auth_error:
+        logger.critical("Failed to authenticate with MongoDB.")
+        logger.critical(f"Error: {auth_error}")
+        raise SystemExit("MongoDB authentication failed. Application cannot start.")
+
+    except Exception as general_error:
+        logger.critical("An unexpected error occurred while connecting to MongoDB.")
+        logger.critical(f"Error: {general_error}")
+        raise SystemExit(
+            "Unexpected error during MongoDB initialization. Application cannot start."
         )
 
 
 async def ensure_super_admin_exists() -> None:
     """
-    Ensure that a default super admin account exists in the database.
-    If not, it creates one.
+    Ensure a super admin account exists in the database. Create one if it doesn't.
 
     Raises:
         ValueError: If required configuration values are missing.
@@ -73,7 +85,6 @@ async def ensure_super_admin_exists() -> None:
 
     existing_admin = await Admin.find_one(Admin.email == admin_email)
     if not existing_admin:
-        from janux_auth_gateway.auth.passwords import hash_password
 
         admin = Admin(
             email=admin_email,

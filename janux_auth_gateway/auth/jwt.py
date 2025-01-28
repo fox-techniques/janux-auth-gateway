@@ -19,7 +19,7 @@ from starlette import status
 from typing import Optional, Dict, Any
 
 from janux_auth_gateway.config import Config
-from janux_auth_gateway.logging.custom_logger import get_logger
+from janux_auth_gateway.debug.custom_logger import get_logger
 
 # Initialize logger
 logger = get_logger("auth_service_logger")

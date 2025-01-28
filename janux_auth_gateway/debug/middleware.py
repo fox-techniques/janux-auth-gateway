@@ -15,7 +15,7 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 
 from fastapi import Request
 from uuid import uuid4
-from janux_auth_gateway.logging.custom_logger import get_logger
+from janux_auth_gateway.debug.custom_logger import get_logger
 
 logger = get_logger("auth_service_logger")
 

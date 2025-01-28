@@ -18,14 +18,14 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from janux_auth_gateway.errors.handlers import register_error_handlers
-from janux_auth_gateway.logging.requests import log_requests
-from janux_auth_gateway.logging.middleware import add_request_id
+from janux_auth_gateway.debug.requests import log_requests
+from janux_auth_gateway.debug.middleware import add_request_id
 from janux_auth_gateway.routers.base_router import base_router
 from janux_auth_gateway.routers.user_router import user_router
 from janux_auth_gateway.routers.admin_router import admin_router
 from janux_auth_gateway.routers.auth_router import auth_router
 from janux_auth_gateway.database.mongoDB import init_db
-from janux_auth_gateway.logging.custom_logger import get_logger
+from janux_auth_gateway.debug.custom_logger import get_logger
 
 logger = get_logger("auth_service_logger")
 
@@ -34,8 +34,8 @@ async def lifespan(app: FastAPI):
     """
     Lifespan context for application startup and shutdown events.
 
-    Logs application startup and shutdown messages. Utilizes an async generator
-    to handle lifecycle events efficiently.
+    Logs application startup and shutdown messages. If MongoDB initialization
+    fails, the application will exit with an appropriate message.
 
     Args:
         app (FastAPI): The FastAPI application instance.
@@ -43,11 +43,25 @@ async def lifespan(app: FastAPI):
     Yields:
         None
     """
-    logger.info("Starting JANUX Authentication Gateway...")
-    # Initialize database connection
-    await init_db()
-    yield
-    logger.info("Shutting down JANUX Authentication Gateway...")
+    try:
+        logger.info("JANUX Authentication Application is starting up...")
+
+        # Initialize MongoDB connection
+        logger.info("Initializing database connection...")
+        await init_db()
+
+        yield  # Application is running
+
+    except SystemExit as critical_error:
+        logger.critical(f"Critical error during startup: {critical_error}")
+        raise critical_error
+
+    except Exception as unexpected_error:
+        logger.critical(f"Unexpected error during startup: {unexpected_error}")
+        raise unexpected_error
+
+    finally:
+        logger.info("JANUX Authentication Application is shutting down...")
 
 
 # Create the FastAPI application instance

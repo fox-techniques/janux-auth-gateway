@@ -1,10 +1,12 @@
 [tool.poetry]
 name = "JANUX-auth-gateway"
 version = "0.1.0"
-description = "Authentication microservice of JANUX-auth-gateway for user management"
+description = "A modular OAuth2 and JWT authentication gateway for FastAPI microservices."
 authors = ["FOX Techniques <ali.nabbi@fox-techniques.com>"]
-license = "Apache License 2.0"
+license = "Apache-2.0"
 readme = "README.md"
+repository = "https://github.com/fox-techniques/janux-auth-gateway"
+homepage = "https://github.com/fox-techniques/janux-auth-gateway"
 packages = [
     { include = "janux_auth_gateway" }
 ]
@@ -23,12 +25,13 @@ pymongo = "4.9"
 bcrypt = "^4.2.1"
 python-json-logger = "^3.2.1"
 
-
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
-git-changelog = "^2.5.3"
-mkdocs-material = "^9.5.50"
 tox = "^4.24.1"
+
+[tool.poetry.group.docs.dependencies]
+mkdocs = "^1.4.0"
+mkdocs-material = "^9.5.50"
 
 [build-system]
 requires = ["poetry-core"]

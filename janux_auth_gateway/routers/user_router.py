@@ -1,10 +1,12 @@
 """
 user_router.py
 
-Defines user-related API routes, including registration and profile retrieval.
+Defines user-related API routes, including registration, login, logout, and profile retrieval.
 
 Endpoints:
 - `/register`: Register a new user.
+- `/login`: Authenticate a user and return a JWT token.
+- `/logout`: Logout the currently authenticated user.
 - `/profile`: Retrieve the profile of the currently authenticated user.
 
 Features:
@@ -18,11 +20,13 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 from fastapi import APIRouter, HTTPException, Depends
 from starlette import status
 from typing import Annotated
+
 from janux_auth_gateway.schemas.user import UserCreate, UserResponse
+from janux_auth_gateway.schemas.response import ConflictResponse
 from janux_auth_gateway.auth.passwords import hash_password
 from janux_auth_gateway.auth.jwt import get_current_user
 from janux_auth_gateway.models.user import User
-from janux_auth_gateway.logging.custom_logger import get_logger
+from janux_auth_gateway.debug.custom_logger import get_logger
 
 # Initialize logger
 logger = get_logger("auth_service_logger")
@@ -35,7 +39,12 @@ user_router = APIRouter()
 
 
 @user_router.post(
-    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+    "/register",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        409: {"description": "Email already registered", "model": ConflictResponse}
+    },
 )
 async def register_user(user: UserCreate):
     """
@@ -55,12 +64,15 @@ async def register_user(user: UserCreate):
     # Check if the user already exists
     existing_user = await User.find_one(User.email == user.email)
     if existing_user:
-        logger.warning(f"Email {user.email} is already registered.")
+        logger.warning(
+            f"User registration failed. Email {user.email} is already registered."
+        )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Email already registered.",
         )
 
+    # Create and insert the user
     hashed_password = hash_password(user.password)
     new_user = User(
         email=user.email,
@@ -73,3 +85,53 @@ async def register_user(user: UserCreate):
     return UserResponse(
         id=str(new_user.id), email=new_user.email, full_name=new_user.full_name
     )
+
+
+@user_router.get("/profile")
+async def get_profile(current_user: UserDependency):
+    """
+    Protected route: Returns the profile of the currently logged-in user.
+
+    Args:
+        current_user (dict): The currently authenticated user (injected by `get_current_user`).
+
+    Returns:
+        dict: The user's profile information.
+    """
+    try:
+        logger.info(f"Profile endpoint accessed for user: {current_user['username']}")
+
+        return {
+            "message": "This is your profile",
+            "user": current_user,
+        }
+    except KeyError as e:
+        logger.error(f"Error accessing user profile: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error retrieving user profile. Please try again later.",
+        )
+
+
+@user_router.post("/logout")
+async def logout(current_user: UserDependency):
+    """
+    Logs out the currently authenticated user by invalidating their token.
+
+    Args:
+        current_user (dict): The currently authenticated user (injected by `get_current_user`).
+
+    Returns:
+        dict: A confirmation message.
+    """
+    try:
+        logger.info(f"Logout endpoint accessed for user: {current_user['username']}")
+
+        # Placeholder logic for logout (e.g., blacklist token, clear session)
+        return {"message": "You have been logged out successfully."}
+    except KeyError as e:
+        logger.error(f"Error during logout: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error logging out. Please try again later.",
+        )
