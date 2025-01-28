@@ -23,7 +23,7 @@ from app.models.user import User
 from app.models.admin import Admin
 
 # Initialize logger
-logger = get_logger("app_logger")
+logger = get_logger("auth_service_logger")
 
 
 async def init_db() -> None:

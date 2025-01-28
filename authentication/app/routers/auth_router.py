@@ -25,7 +25,7 @@ from app.schemas.token import Token
 from app.logging.custom_logger import get_logger
 
 # Initialize logger
-logger = get_logger("app_logger")
+logger = get_logger("auth_service_logger")
 
 # Initialize router
 auth_router = APIRouter()

@@ -27,7 +27,7 @@ from app.models.user import User
 from app.logging.custom_logger import get_logger
 
 # Initialize logger
-logger = get_logger("app_logger")
+logger = get_logger("auth_service_logger")
 
 # Admin OAuth2 dependency
 AdminDependency = Annotated[dict, Depends(get_current_admin)]

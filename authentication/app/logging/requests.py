@@ -16,7 +16,7 @@ from app.logging.custom_logger import get_logger
 
 import time
 
-logger = get_logger("app_logger")
+logger = get_logger("auth_service_logger")
 
 
 async def log_requests(request: Request, call_next):

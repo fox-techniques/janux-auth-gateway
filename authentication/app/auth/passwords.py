@@ -15,7 +15,7 @@ from passlib.context import CryptContext
 from app.logging.custom_logger import get_logger
 
 # Initialize logger
-logger = get_logger("app_logger")
+logger = get_logger("auth_service_logger")
 
 # Configure the password hashing context
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

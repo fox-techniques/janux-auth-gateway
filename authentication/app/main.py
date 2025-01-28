@@ -28,7 +28,7 @@ from app.logging.custom_logger import get_logger
 from typing import Annotated
 
 # Initialize the logger
-logger = get_logger("app_logger")
+logger = get_logger("auth_service_logger")
 logger.info("--- JANUX Authentication service starts here ------------------------")
 
 # User and Admin OAuth2 Schemes

@@ -22,7 +22,7 @@ from app.config import Config
 from app.logging.custom_logger import get_logger
 
 # Initialize logger
-logger = get_logger("app_logger")
+logger = get_logger("auth_service_logger")
 
 # Constants
 SECRET_KEY = Config.SECRET_KEY

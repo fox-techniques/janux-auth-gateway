@@ -26,29 +26,29 @@ services:
       - MONGO_SUPER_ADMIN_PASSWORD=superadminpassword
     depends_on:
       - auth-db
-  # feedback-db:
-  #   image: mongo:5.0
-  #   container_name: feedback-db
-  #   ports:
-  #     - "27019:27017"
-  #   environment:
-  #     MONGO_INITDB_DATABASE: feedback_db
-  #   volumes:
-  #     - feedback_db_data:/data/db
-  # feedback:
-  #   build:
-  #     context: ./feedback
-  #   container_name: feedback-service
-  #   ports:
-  #     - "8001:8001"
-  #   environment:
-  #     - MONGO_URI=mongodb://feedback-db:27017
-  #     - MONGO_DATABASE_NAME=feedback_db
-  #     - AUTH_SERVICE_URL=http://authentication-service:8000
-  #   depends_on:
-  #     - feedback-db
-  #     - authentication
+  feedback-db:
+    image: mongo:5.0
+    container_name: feedback-db
+    ports:
+      - "27019:27017"
+    environment:
+      MONGO_INITDB_DATABASE: feedback_db
+    volumes:
+      - feedback_db_data:/data/db
+  feedback:
+    build:
+      context: ./feedback
+    container_name: feedback-service
+    ports:
+      - "8001:8001"
+    environment:
+      - MONGO_URI=mongodb://feedback-db:27017
+      - MONGO_DATABASE_NAME=feedback_db
+      - AUTH_SERVICE_URL=http://authentication-service:8000
+    depends_on:
+      - feedback-db
+      - authentication
 
 volumes:
   auth_db_data:
-  # feedback_db_data:
+  feedback_db_data:
