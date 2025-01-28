@@ -1,9 +1,22 @@
+"""
+requests.py
+
+Middleware for logging HTTP request details in a FastAPI application.
+
+Features:
+- Logs incoming HTTP requests, including method and path.
+- Measures and logs execution time for each request.
+- Handles and logs exceptions during request processing.
+
+Author: FOX Techniques <ali.nabbi@fox-techniques.com>
+"""
+
 from fastapi import Request
 from app.logging.custom_logger import get_logger
 
 import time
 
-logger = get_logger("app_logger")
+logger = get_logger("feedback_service_logger")
 
 
 async def log_requests(request: Request, call_next):
@@ -21,10 +34,21 @@ async def log_requests(request: Request, call_next):
         Response: The response object generated after processing the request.
     """
     start_time = time.time()
-    response = await call_next(request)
+
+    logger.info(f"Request received: {request.method} {request.url.path}")
+
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        process_time = (time.time() - start_time) * 1000
+        logger.error(
+            f"Request failed: {request.method} {request.url.path} after {process_time:.2f}ms. Error: {exc}"
+        )
+        raise
+
     process_time = (time.time() - start_time) * 1000
-    logger = get_logger("app_logger")
     logger.info(
-        f"{request.method} {request.url.path} completed In: {process_time:.2f}ms, Status: {response.status_code}"
+        f"Request completed: {request.method} {request.url.path} in {process_time:.2f}ms. Status: {response.status_code}"
     )
+
     return response

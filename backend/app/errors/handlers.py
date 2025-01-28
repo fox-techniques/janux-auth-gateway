@@ -1,63 +1,101 @@
+"""
+handlers.py
+
+Custom error handlers for the FastAPI application.
+
+Features:
+- Handles unexpected exceptions (500 Internal Server Error).
+- Handles HTTP exceptions and validation errors consistently.
+- Logs detailed error information for debugging.
+
+Author: FOX Techniques <ali.nabbi@fox-techniques.com>
+"""
+
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-
 from starlette import status
-
 from app.logging.custom_logger import get_logger
 
-logger = get_logger("app_logger")
+# Initialize logger
+logger = get_logger("feedback_service_logger")
 
 
-def register_error_handlers(app: FastAPI):
+def register_error_handlers(app: FastAPI) -> None:
+    """
+    Register custom error handlers with the FastAPI application.
+
+    Args:
+        app (FastAPI): The FastAPI application instance.
+    """
+
     @app.exception_handler(Exception)
     async def generic_exception_handler(request: Request, exc: Exception):
+        """
+        Handle unexpected exceptions and log them.
+
+        Args:
+            request (Request): The request object.
+            exc (Exception): The exception instance.
+
+        Returns:
+            JSONResponse: A 500 Internal Server Error response.
+        """
+        logger.error(
+            f"Unexpected error occurred: {str(exc)}",
+            exc_info=True,
+            extra={"path": request.url.path, "method": request.method},
+        )
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"message": "An unexpected error occurred."},
         )
 
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(request: Request, exc: HTTPException):
+        """
+        Handle HTTP exceptions and return a JSON response.
 
-async def http_exception_handler(request: Request, exc: Exception):
-    """
-    Exception handler for HTTP exceptions raised during request processing.
+        Args:
+            request (Request): The request object.
+            exc (HTTPException): The exception instance containing HTTP error details.
 
-    This handler logs the exception details and returns a JSON response containing the error message and HTTP status code.
-    This standardizes error responses across the application.
+        Returns:
+            JSONResponse: A response with the HTTP status code and error details.
+        """
+        logger.warning(
+            f"HTTP Exception: {exc.detail}",
+            extra={"path": request.url.path, "method": request.method},
+        )
+        return JSONResponse(
+            content={"detail": exc.detail},
+            status_code=exc.status_code,
+        )
 
-    Args:
-        request (Request): The request object during which the exception occurred.
-        exc (HTTPException): The exception instance containing details about the HTTP error.
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(
+        request: Request, exc: RequestValidationError
+    ):
+        """
+        Handle validation errors and return detailed error messages.
 
-    Returns:
-        JSONResponse: A JSON response that includes the error detail and the HTTP status code.
-    """
-    # Log the exception
-    logger.error(f"Exception occurred: {str(exc)}", exc_info=True)
+        Args:
+            request (Request): The request object.
+            exc (RequestValidationError): The exception instance containing validation error details.
 
-    # Return a generic error response if detail is missing
-    detail = getattr(exc, "detail", "An unexpected error occurred")
-    status_code = getattr(exc, "status_code", 500)
+        Returns:
+            JSONResponse: A 422 Unprocessable Entity response with validation errors.
+        """
+        logger.warning(
+            f"Validation Error: {exc.errors()}",
+            extra={"path": request.url.path, "method": request.method},
+        )
+        return JSONResponse(
+            content={"detail": exc.errors()},
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        )
 
-    return JSONResponse(
-        content={"detail": detail},
-        status_code=status_code,
-    )
-
-
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    """
-    Exception handler for handling validation errors raised when request data does not fulfill the expected schema.
-
-    This function logs the validation issues and returns a JSON response that details the validation errors,
-    using a 422 Unprocessable Entity status code. This informs the client about the incorrect or missing data in the request.
-
-    Args:
-        request (Request): The request object during which the validation error occurred.
-        exc (RequestValidationError): The exception instance that includes detailed validation error information.
-
-    Returns:
-        JSONResponse: A response containing the detailed validation errors and a 422 status code.
-    """
-    logger.warning(f"Validation Error: {exc}", exc_info=True)
-    return JSONResponse(content={"detail": exc.errors()}, status_code=422)
+    # Register the handlers
+    app.add_exception_handler(Exception, generic_exception_handler)
+    app.add_exception_handler(HTTPException, http_exception_handler)
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)

@@ -1,7 +1,7 @@
 """
-The main package.
+This is the Feedback service application package.
 
-This package is designed as backend for photo albums file operations
+Contains all modules and sub-packages required for the service.
 """
 
 __version__ = "0.1.0"

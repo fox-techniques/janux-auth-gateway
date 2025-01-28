@@ -1,30 +1,71 @@
-# from fastapi import APIRouter, Depends, HTTPException
-# from app.schemas.token import Token
+"""
+auth_router.py
 
-# from app.auth.passwords import authenticate_user
+Defines authentication-related API routes for the JANUX Authentication microservice.
 
-# from app.auth.jwt import create_access_token
+Endpoints:
+- `/login`: Unified login endpoint for both users and admins.
 
-# from starlette import status
+Features:
+- Validates user and admin credentials securely.
+- Issues JWT tokens with appropriate roles and expiration.
+- Detailed logging for authentication operations.
 
-# from fastapi.security import OAuth2PasswordRequestForm
+Author: FOX Techniques <ali.nabbi@fox-techniques.com>
+"""
 
-# auth_router = APIRouter()
+from fastapi import APIRouter, HTTPException, Depends
+from fastapi.security import OAuth2PasswordRequestForm
+from datetime import timedelta
+from starlette import status
+from app.auth.jwt import create_access_token
+from app.database.mongoDB import authenticate_user, authenticate_admin
+from app.config import Config
+from app.schemas.token import Token
+from app.logging.custom_logger import get_logger
+
+# Initialize logger
+logger = get_logger("app_logger")
+
+# Initialize router
+auth_router = APIRouter()
 
 
-# @auth_router.post("/token", response_model=Token)
-# async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-#     """
-#     Log in a user by validating their credentials and generating a JWT token.
-#     """
-#     # Find the user in the database
-#     user = authenticate_user(form_data.username, form_data.password)
+@auth_router.post("/login", response_model=Token)
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    """
+    Unified login endpoint for both users and admins.
 
-#     if not user:
-#         raise HTTPException(
-#             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password"
-#         )
+    Args:
+        form_data (OAuth2PasswordRequestForm): Login form containing username and password.
 
-#     # Create an access token
-#     access_token = create_access_token(data={"sub": user.email, "id": str(user["_id"])})
-#     return {"access_token": access_token, "token_type": "bearer"}
+    Returns:
+        Token: A JWT token with the authenticated user's role and expiration.
+
+    Raises:
+        HTTPException: If authentication fails.
+    """
+    email = form_data.username
+    password = form_data.password
+
+    logger.info(f"Login attempt for email: {email}")
+
+    if await authenticate_admin(email, password):
+        role = "admin"
+    elif await authenticate_user(email, password):
+        role = "user"
+    else:
+        logger.warning(f"Authentication failed for email: {email}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    access_token = create_access_token(
+        data={"sub": email, "role": role},
+        expires_delta=timedelta(minutes=Config.ACCESS_TOKEN_EXPIRE_MINUTES),
+    )
+
+    logger.info(f"Login successful for email: {email}, role: {role}")
+    return Token(access_token=access_token, token_type="bearer")

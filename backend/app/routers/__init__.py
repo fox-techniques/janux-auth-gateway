@@ -1,1 +1,5 @@
-from .base_router import base_router as base_router
+"""
+This package contains all routers for the Feedback microservice.
+
+Routers define the API endpoints exposed by the service.
+"""
