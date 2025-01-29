@@ -29,9 +29,10 @@ from janux_auth_gateway.database.mongoDB import init_db
 from janux_auth_gateway.debug.custom_logger import get_logger
 
 
-import os
-
 logger = get_logger("auth_service_logger")
+
+# Get allowed origins from Configuration
+origins = Config.ALLOWED_ORIGINS
 
 
 async def lifespan(app: FastAPI):
@@ -82,14 +83,14 @@ async def lifespan(app: FastAPI):
 # Create the FastAPI application instance
 app = FastAPI(title="JANUX Authentication Gateway", lifespan=lifespan)
 
-# Configure middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Update for production environments
+    allow_origins=origins if origins != [""] else ["https://your-secure-domain.com"],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
 )
+
 app.middleware("http")(log_requests)
 app.middleware("http")(add_request_id)
 

@@ -58,6 +58,7 @@ class Config:
 
     # Application configuration
     ENVIRONMENT = env
+    ALLOWED_ORIGINS = get_env_variable("ALLOWED_ORIGINS", [""])
     CONTAINER = bool(get_env_variable("CONTAINER", False))
 
     # JWT configuration
