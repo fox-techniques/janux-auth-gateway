@@ -3,13 +3,30 @@ Custom logger setup for the JANUX Authentication Gateway.
 
 Features:
 - Provides a `get_logger` function to retrieve configured loggers.
+- Configures loggers dynamically based on environment (local vs container).
 - Suppresses noisy logs from third-party libraries like FastAPI, Uvicorn, and Beanie.
-- Ensures only critical or error-level logs are captured for external libraries.
+- Ensures clean, readable, and organized logging for application and third-party logs.
+
+Dependencies:
+- Requires `coloredlogs` for enhanced console output.
 
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
 import logging
+import coloredlogs
+from .config import LOGGING_CONFIG
+
+# Apply the logging configuration
+logging.config.dictConfig(LOGGING_CONFIG)
+
+# Apply colored logs to the console handler for better readability
+coloredlogs.install(
+    level="INFO",
+    logger=logging.getLogger("app_logger"),
+    fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
 def get_logger(name: str) -> logging.Logger:

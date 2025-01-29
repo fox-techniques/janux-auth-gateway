@@ -24,6 +24,7 @@ motor = "3.6.1"
 pymongo = "4.9"
 bcrypt = "^4.2.1"
 python-json-logger = "^3.2.1"
+coloredlogs = "^15.0.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"

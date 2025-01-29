@@ -22,6 +22,7 @@ EXPOSE 8000
 
 # Define environment variable
 ENV NAME JANUX-Auth-Gateway
+ENV ENVIRONMENT container
 
 # Run app.py when the container launches. Ensure the working directory is correctly set
 # to where your application code resides, hence the WORKDIR command above is crucial.

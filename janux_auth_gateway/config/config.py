@@ -43,6 +43,9 @@ class Config:
     Configuration class to centralize and validate environment variables.
     """
 
+    # Application configuration
+    ENVIRONMENT = get_env_variable("ENVIRONMENT", "local")
+
     # JWT configuration
     SECRET_KEY = get_env_variable("AUTH_SECRET_KEY")
     ALGORITHM = get_env_variable("AUTH_ALGORITHM", "HS256")

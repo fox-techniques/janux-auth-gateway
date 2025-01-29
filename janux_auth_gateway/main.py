@@ -24,8 +24,12 @@ from janux_auth_gateway.routers.base_router import base_router
 from janux_auth_gateway.routers.user_router import user_router
 from janux_auth_gateway.routers.admin_router import admin_router
 from janux_auth_gateway.routers.auth_router import auth_router
+from janux_auth_gateway.config import Config
 from janux_auth_gateway.database.mongoDB import init_db
 from janux_auth_gateway.debug.custom_logger import get_logger
+
+
+import os
 
 logger = get_logger("auth_service_logger")
 
@@ -45,6 +49,15 @@ async def lifespan(app: FastAPI):
     """
     try:
         logger.info("JANUX Authentication Application is starting up...")
+
+        environment = Config.ENVIRONMENT
+
+        logger.info(f"Running in environment: {environment}")
+
+        if environment == "container":
+            logger.info("Detected containerized environment.")
+        else:
+            logger.info("Running in local development mode.")
 
         # Initialize MongoDB connection
         logger.info("Initializing database connection...")

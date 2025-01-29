@@ -2,14 +2,13 @@
 Defines logging configurations for the JANUX Authentication Gateway.
 
 Features:
-- JSON-based structured logging for better log management and integration with monitoring tools.
+- Dynamically detects if running in a container and adjusts log storage location.
+- JSON-based structured logging for application logs.
+- Plain text logging for third-party logs.
 - Configures console and file handlers with customizable log levels.
-- Automatically creates a `logs/` directory and ensures a log file exists.
-
-Dependencies:
-- Requires `python-json-logger` for JSON log formatting.
 
 Environment Variables:
+- ENVIRONMENT: `local` (default) or `container` to determine log storage path.
 - LOG_LEVEL: Sets the log level: DEBUG, INFO, WARNING, ERROR, or CRITICAL. (default: DEBUG).
 
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
@@ -19,53 +18,86 @@ import os
 import logging.config
 from pythonjsonlogger import jsonlogger
 
-# Log file path
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-LOGS_DIR = os.path.join(BASE_DIR, "logs")
+# Detect environment (default: local)
+ENVIRONMENT = os.getenv("ENVIRONMENT", "local")
 
+# Define log directory based on the environment
+if ENVIRONMENT == "container":
+    LOGS_DIR = "/var/log/app"  # Container log path
+else:
+    LOGS_DIR = os.path.join(os.getcwd(), "logs")  # Local log path
+
+# Ensure log directory exists
 if not os.path.exists(LOGS_DIR):
     os.makedirs(LOGS_DIR)
 
-LOG_FILE_PATH = os.path.join(LOGS_DIR, "app.log")
+# Define log file paths
+LOG_FILE_PATH_APP = os.path.join(LOGS_DIR, "app.log")
+LOG_FILE_PATH_ALL = os.path.join(LOGS_DIR, "all.log")
 
 # Read the log level from the environment variable
 LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG").upper()
 
+# Logging configuration
 LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
         "json": {
             "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
-            "format": "%(asctime)s %(name)s %(levelname)s %(message)s",
+            "format": "%(asctime)s %(name)s %(levelname)s %(message)s %(module)s %(lineno)d",
+        },
+        "plain": {
+            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
         },
     },
     "handlers": {
         "console": {
-            "level": LOG_LEVEL,
             "class": "logging.StreamHandler",
-            "formatter": "json",
-            "stream": "ext://sys.stdout",
+            "formatter": "plain",
+            "level": "INFO",
         },
-        "file": {
-            "level": LOG_LEVEL,
+        "file_app": {
             "class": "logging.FileHandler",
             "formatter": "json",
-            "filename": LOG_FILE_PATH,
-            "mode": "a",
+            "level": "DEBUG",
+            "filename": LOG_FILE_PATH_APP,
+        },
+        "file_all": {
+            "class": "logging.FileHandler",
+            "formatter": "plain",
+            "level": "DEBUG",
+            "filename": LOG_FILE_PATH_ALL,
         },
     },
     "loggers": {
         "app_logger": {
-            "handlers": ["console", "file"],
-            "level": LOG_LEVEL,
+            "handlers": ["console", "file_app"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+        "uvicorn": {
+            "handlers": ["console", "file_all"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "pymongo": {
+            "handlers": ["console", "file_all"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "third_party": {
+            "handlers": ["console", "file_all"],
+            "level": "INFO",
             "propagate": False,
         },
     },
     "root": {
-        "handlers": ["console", "file"],
-        "level": LOG_LEVEL,
+        "handlers": ["console", "file_app", "file_all"],
+        "level": "INFO",
     },
 }
 
+# Apply logging configuration
 logging.config.dictConfig(LOGGING_CONFIG)
