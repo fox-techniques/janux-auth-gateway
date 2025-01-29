@@ -51,10 +51,12 @@ async def lifespan(app: FastAPI):
         logger.info("JANUX Authentication Application is starting up...")
 
         environment = Config.ENVIRONMENT
+        containerized = Config.CONTAINER
 
         logger.info(f"Running in environment: {environment}")
+        logger.info(f"Containerized environment: {containerized}")
 
-        if environment == "container":
+        if containerized:
             logger.info("Detected containerized environment.")
         else:
             logger.info("Running in local development mode.")

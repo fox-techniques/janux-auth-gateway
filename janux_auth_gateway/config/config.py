@@ -8,11 +8,24 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 from typing import Optional
 
-# Load environment variables from .env file
-load_dotenv()
+# Determine the environment and load the appropriate .env file
+env = os.getenv("ENVIRONMENT", "local")
+try:
+    env_file = find_dotenv(f".env.{env}")
+    if not env_file:
+        raise FileNotFoundError
+except FileNotFoundError:
+    env_file = find_dotenv(".env")
+
+if env_file:
+    load_dotenv(env_file)
+else:
+    raise FileNotFoundError(
+        f"No suitable environment file found for {env} or default .env"
+    )
 
 
 def get_env_variable(var_name: str, default: Optional[str] = None) -> str:
@@ -44,7 +57,8 @@ class Config:
     """
 
     # Application configuration
-    ENVIRONMENT = get_env_variable("ENVIRONMENT", "local")
+    ENVIRONMENT = env
+    CONTAINER = bool(get_env_variable("CONTAINER", False))
 
     # JWT configuration
     SECRET_KEY = get_env_variable("AUTH_SECRET_KEY")
