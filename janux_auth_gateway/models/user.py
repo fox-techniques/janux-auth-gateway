@@ -13,7 +13,7 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
 from beanie import Document
-from pydantic import EmailStr, Field, validator
+from pydantic import EmailStr, Field
 from datetime import datetime, timezone
 from .roles import UserRole
 
@@ -36,7 +36,6 @@ class User(Document):
     role: UserRole = Field(default=UserRole.USER, example="user")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    @validator("full_name")
     def validate_full_name(cls, value: str) -> str:
         """
         Validates the full name field.
