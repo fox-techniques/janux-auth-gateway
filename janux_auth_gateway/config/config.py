@@ -4,12 +4,17 @@ config.py
 Central configuration module for the application. This module loads and validates
 environment variables using python-dotenv and os.
 
+Features:
+- Dynamically loads environment variables based on the specified environment.
+- Provides validation for critical environment variables.
+- Ensures secure handling of secrets and configuration settings.
+
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
 import os
 from dotenv import load_dotenv, find_dotenv
-from typing import Optional, Set
+from typing import Optional, List
 
 # Determine the environment and load the appropriate .env file
 env = os.getenv("ENVIRONMENT", "local")
@@ -58,30 +63,24 @@ class Config:
 
     # Application configuration
     ENVIRONMENT = env
-    ALLOWED_ORIGINS = get_env_variable("ALLOWED_ORIGINS", "").split(
-        ","
-    )  # Supports multiple origins
+    ALLOWED_ORIGINS: List[str] = get_env_variable("ALLOWED_ORIGINS", "").split(",")
     CONTAINER = get_env_variable("CONTAINER", "False").lower() in ["true", "1"]
 
     # JWT configuration
-    SECRET_KEY = get_env_variable("AUTH_SECRET_KEY")
+    PRIVATE_KEY_PATH = get_env_variable("AUTH_PRIVATE_KEY_PATH", "private.pem")
+    PUBLIC_KEY_PATH = get_env_variable("AUTH_PUBLIC_KEY_PATH", "public.pem")
 
-    # Ensure SECRET_KEY meets security requirements
-    if len(SECRET_KEY) < 32:
-        raise ValueError("SECRET_KEY must be at least 32 characters long for security.")
+    # Load private and public keys securely
+    try:
+        with open(PRIVATE_KEY_PATH, "r") as f:
+            PRIVATE_KEY = f.read()
+        with open(PUBLIC_KEY_PATH, "r") as f:
+            PUBLIC_KEY = f.read()
+    except FileNotFoundError:
+        raise ValueError("JWT private/public key files not found.")
 
-    ALLOWED_ALGORITHMS: Set[str] = {
-        "HS256",
-        "RS256",
-        "ES256",
-    }  # Restrict allowed algorithms
-    ALGORITHM = get_env_variable("AUTH_ALGORITHM", "HS256")
-
-    if ALGORITHM not in ALLOWED_ALGORITHMS:
-        raise ValueError(
-            f"Invalid JWT algorithm. Secure algorithms allowed: HS256, RS256, ES256"
-        )
-
+    # Restrict allowed algorithms
+    ALGORITHM = "RS256"
     ACCESS_TOKEN_EXPIRE_MINUTES = int(
         get_env_variable("ACCESS_TOKEN_EXPIRE_MINUTES", "20")
     )
@@ -107,13 +106,14 @@ class Config:
             ValueError: If any required environment variable is missing or invalid.
         """
         validators = {
-            "SECRET_KEY": lambda v: len(v) >= 32 and isinstance(v, str),
+            "PRIVATE_KEY": lambda v: isinstance(v, str) and "BEGIN PRIVATE KEY" in v,
+            "PUBLIC_KEY": lambda v: isinstance(v, str) and "BEGIN PUBLIC KEY" in v,
             "MONGO_URI": lambda v: v.startswith("mongodb://")
             or v.startswith("mongodb+srv://"),
         }
 
         for var, validator in validators.items():
-            value = getattr(Config, var)
+            value = getattr(Config, var, None)
             if not validator(value):
                 raise ValueError(f"Invalid configuration for {var}: {value}")
 

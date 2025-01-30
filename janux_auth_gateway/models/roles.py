@@ -6,6 +6,7 @@ Defines role enumerations for users and admins.
 Features:
 - Centralized role management for better maintainability and type safety.
 - Provides enums for admin roles (`AdminRole`) and user roles (`UserRole`).
+- Ensures role consistency across the authentication system.
 
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
@@ -41,3 +42,8 @@ class UserRole(str, Enum):
     CONTRIBUTOR = "contributor"
     MAINTAINER = "maintainer"
     TESTER = "tester"
+
+
+# Mapping of valid roles for validation
+VALID_ADMIN_ROLES = {role.value for role in AdminRole}
+VALID_USER_ROLES = {role.value for role in UserRole}

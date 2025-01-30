@@ -8,6 +8,7 @@ Features:
 - Supports role-based control using `AdminRole` enum.
 - Automatically sets the creation timestamp for new admins.
 - Includes validation for fields such as `email`, `full_name`, and `hashed_password`.
+- Enforces unique email addresses at the database level.
 
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
@@ -81,7 +82,7 @@ class Admin(Document):
         Settings for the MongoDB collection for admins.
         """
 
-        collection = "admins"
+        collection_name = "admins"
 
     def __str__(self) -> str:
         """

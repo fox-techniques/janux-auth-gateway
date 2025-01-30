@@ -12,7 +12,8 @@ Endpoints:
 Features:
 - Secure password handling and validation.
 - Role-based access for user operations.
-- Detailed logging for all operations.
+- Implements rate-limiting to prevent excessive API calls.
+- Logs detailed user actions for security and audit purposes.
 
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
@@ -20,6 +21,7 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 from fastapi import APIRouter, HTTPException, Depends
 from starlette import status
 from typing import Annotated
+import redis
 
 from janux_auth_gateway.schemas.user import UserCreate, UserResponse
 from janux_auth_gateway.schemas.response import ConflictResponse
@@ -31,11 +33,43 @@ from janux_auth_gateway.debug.custom_logger import get_logger
 # Initialize logger
 logger = get_logger("auth_service_logger")
 
+# Redis instance for rate-limiting user actions
+redis_client = redis.Redis(host="localhost", port=6379, db=0)
+
 # User OAuth2 dependency
 UserDependency = Annotated[dict, Depends(get_current_user)]
 
 # Initialize router
 user_router = APIRouter()
+
+
+def is_rate_limited(user_email: str) -> bool:
+    """
+    Checks if a user is rate-limited to prevent excessive API requests.
+
+    Args:
+        user_email (str): The email of the user attempting an action.
+
+    Returns:
+        bool: True if the user is rate-limited, False otherwise.
+    """
+    attempts_key = f"user_rate_limit:{user_email}"
+    attempts = redis_client.get(attempts_key)
+    if attempts and int(attempts) >= 10:
+        return True
+    return False
+
+
+def record_user_action(user_email: str):
+    """
+    Records a user action for rate-limiting.
+
+    Args:
+        user_email (str): The email of the user performing an action.
+    """
+    attempts_key = f"user_rate_limit:{user_email}"
+    redis_client.incr(attempts_key)
+    redis_client.expire(attempts_key, 900)  # Reset after 15 minutes
 
 
 @user_router.post(
@@ -48,40 +82,29 @@ user_router = APIRouter()
 )
 async def register_user(user: UserCreate):
     """
-    Register a new user using Beanie for database operations.
-
-    Args:
-        user (UserCreate): The user data for registration.
-
-    Returns:
-        UserResponse: The created user's response data.
-
-    Raises:
-        HTTPException: If the email is already registered.
+    Register a new user securely.
     """
     logger.info(f"Register endpoint accessed for email: {user.email}")
 
-    # Check if the user already exists
+    if is_rate_limited(user.email):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many requests. Please try again later.",
+        )
+
     existing_user = await User.find_one(User.email == user.email)
     if existing_user:
-        logger.warning(
-            f"User registration failed. Email {user.email} is already registered."
-        )
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Email already registered.",
+            status_code=status.HTTP_409_CONFLICT, detail="Email already registered."
         )
 
-    # Create and insert the user
     hashed_password = hash_password(user.password)
     new_user = User(
-        email=user.email,
-        full_name=user.full_name,
-        hashed_password=hashed_password,
+        email=user.email, full_name=user.full_name, hashed_password=hashed_password
     )
     await new_user.insert()
+    record_user_action(user.email)
 
-    logger.info(f"User {user.email} registered successfully.")
     return UserResponse(
         id=str(new_user.id), email=new_user.email, full_name=new_user.full_name
     )
@@ -90,48 +113,15 @@ async def register_user(user: UserCreate):
 @user_router.get("/profile")
 async def get_profile(current_user: UserDependency):
     """
-    Protected route: Returns the profile of the currently logged-in user.
-
-    Args:
-        current_user (dict): The currently authenticated user (injected by `get_current_user`).
-
-    Returns:
-        dict: The user's profile information.
+    Returns the profile of the currently logged-in user.
     """
-    try:
-        logger.info(f"Profile endpoint accessed for user: {current_user['username']}")
-
-        return {
-            "message": "This is your profile",
-            "user": current_user,
-        }
-    except KeyError as e:
-        logger.error(f"Error accessing user profile: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error retrieving user profile. Please try again later.",
-        )
+    return {"message": "This is your profile", "user": current_user}
 
 
 @user_router.post("/logout")
 async def logout(current_user: UserDependency):
     """
-    Logs out the currently authenticated user by invalidating their token.
-
-    Args:
-        current_user (dict): The currently authenticated user (injected by `get_current_user`).
-
-    Returns:
-        dict: A confirmation message.
+    Logs out the currently authenticated user.
     """
-    try:
-        logger.info(f"Logout endpoint accessed for user: {current_user['username']}")
-
-        # Placeholder logic for logout (e.g., blacklist token, clear session)
-        return {"message": "You have been logged out successfully."}
-    except KeyError as e:
-        logger.error(f"Error during logout: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error logging out. Please try again later.",
-        )
+    logger.info(f"Logout endpoint accessed for user: {current_user['username']}")
+    return {"message": "You have been logged out successfully."}

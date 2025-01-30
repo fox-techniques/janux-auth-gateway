@@ -10,6 +10,8 @@ Endpoints:
 Features:
 - Lightweight and essential routes for service interaction.
 - Provides a health check mechanism to monitor service availability.
+- Logs API accesses for better monitoring and debugging.
+- Ensures readiness and liveness probes for containerized environments.
 
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
@@ -46,3 +48,27 @@ async def health_check():
     """
     logger.info("Health check endpoint accessed.")
     return {"status": "healthy"}
+
+
+@base_router.get("/readiness")
+async def readiness_probe():
+    """
+    Readiness probe to indicate if the application is ready to receive traffic.
+
+    Returns:
+        dict: The readiness status.
+    """
+    logger.info("Readiness probe accessed.")
+    return {"status": "ready"}
+
+
+@base_router.get("/liveness")
+async def liveness_probe():
+    """
+    Liveness probe to check if the application is running properly.
+
+    Returns:
+        dict: The liveness status.
+    """
+    logger.info("Liveness probe accessed.")
+    return {"status": "alive"}

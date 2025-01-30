@@ -14,7 +14,7 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 
 import pytest
 import os
-import secrets  # Securely generate random secrets
+import secrets
 from unittest.mock import patch
 from janux_auth_gateway.config import get_env_variable, Config
 
@@ -60,7 +60,6 @@ def mock_config(mocker):
     mocker.patch.multiple(
         Config,
         SECRET_KEY=secrets.token_urlsafe(32),  # Securely generate a random secret key
-        ALGORITHM="HS256",
         ACCESS_TOKEN_EXPIRE_MINUTES=30,
         USER_TOKEN_URL="http://localhost/token",
         ADMIN_TOKEN_URL="http://localhost/admin-token",
@@ -83,7 +82,6 @@ def test_config_initialization(mock_config):
     - All environment variables should be loaded correctly.
     """
     assert isinstance(Config.SECRET_KEY, str) and len(Config.SECRET_KEY) >= 32
-    assert Config.ALGORITHM == "HS256"
     assert Config.ACCESS_TOKEN_EXPIRE_MINUTES == 30
     assert Config.USER_TOKEN_URL == "http://localhost/token"
     assert Config.ADMIN_TOKEN_URL == "http://localhost/admin-token"

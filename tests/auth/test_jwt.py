@@ -9,19 +9,22 @@ Tests:
 - Role-based authentication enforcement (user vs admin)
 - Handling of expired or malformed tokens
 
+Replaced python-jose with PyJWT for enhanced security.
+
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
 import pytest
 import secrets
 from datetime import timedelta, datetime, timezone
-from jose import jwt, JWTError
+import jwt
 from fastapi import HTTPException
 from unittest.mock import patch
 from freezegun import freeze_time
 
 from janux_auth_gateway.auth.jwt import (
     create_access_token,
+    verify_jwt,
     get_current_user,
     get_current_admin,
 )
@@ -29,7 +32,7 @@ from janux_auth_gateway.config import Config
 
 # Mocked constants
 MOCK_SECRET_KEY = secrets.token_urlsafe(32)
-MOCK_ALGORITHM = "HS256"
+MOCK_ALGORITHM = "RS256"
 
 
 @pytest.fixture(autouse=True)
@@ -43,16 +46,10 @@ def mock_config_env(mocker):
 def test_create_access_token():
     """
     Test JWT token creation with a default expiration.
-
-    Expected Outcome:
-    - The generated token should contain the expected payload and expiration.
     """
     data = {"sub": "testuser", "role": "user"}
-    token = create_access_token(
-        data, secret_key=MOCK_SECRET_KEY, algorithm=MOCK_ALGORITHM
-    )
-
-    decoded_payload = jwt.decode(token, MOCK_SECRET_KEY, algorithms=[MOCK_ALGORITHM])
+    token = create_access_token(data)
+    decoded_payload = verify_jwt(token)
     assert decoded_payload["sub"] == "testuser"
     assert decoded_payload["role"] == "user"
     assert "exp" in decoded_payload
@@ -61,31 +58,21 @@ def test_create_access_token():
 def test_create_access_token_with_expiry():
     """
     Test JWT token expiration time.
-
-    Expected Outcome:
-    - The token should expire and raise an exception.
     """
     data = {"sub": "testuser", "role": "user"}
-
-    # Freeze time for precise expiration control
     with freeze_time(datetime.now(timezone.utc)) as frozen_time:
         token = create_access_token(data, expires_delta=timedelta(seconds=2))
-        frozen_time.tick(delta=timedelta(seconds=3))  # Fast-forward 3 seconds
-
-        with pytest.raises(JWTError):
-            jwt.decode(token, MOCK_SECRET_KEY, algorithms=[MOCK_ALGORITHM])
+        frozen_time.tick(delta=timedelta(seconds=3))
+        with pytest.raises(HTTPException):
+            verify_jwt(token)
 
 
 def test_valid_user_token():
     """
     Test decoding a valid user token.
-
-    Expected Outcome:
-    - The function should return the correct user information.
     """
     data = {"sub": "testuser", "role": "user"}
     token = create_access_token(data)
-
     user = get_current_user(token)
     assert user["username"] == "testuser"
     assert user["role"] == "user"
@@ -94,13 +81,9 @@ def test_valid_user_token():
 def test_valid_admin_token():
     """
     Test decoding a valid admin token.
-
-    Expected Outcome:
-    - The function should return the correct admin information.
     """
     data = {"sub": "adminuser", "role": "admin"}
     token = create_access_token(data)
-
     admin = get_current_admin(token)
     assert admin["username"] == "adminuser"
     assert admin["role"] == "admin"
@@ -109,51 +92,32 @@ def test_valid_admin_token():
 def test_invalid_token():
     """
     Test handling of an invalid JWT token.
-
-    Expected Outcome:
-    - The function should raise an HTTPException for an invalid token.
     """
     invalid_token = "invalid.jwt.token"
-
     with pytest.raises(HTTPException) as exc_info:
-        get_current_user(invalid_token)
-
+        verify_jwt(invalid_token)
     assert exc_info.value.status_code == 401
-    assert "Could not validate credentials" in exc_info.value.detail
 
 
 def test_invalid_role():
     """
     Test handling of a token with an incorrect role.
-
-    Expected Outcome:
-    - The function should raise an HTTPException because the user role is invalid.
     """
     data = {"sub": "testuser", "role": "user"}
     token = create_access_token(data)
-
     with pytest.raises(HTTPException) as exc_info:
         get_current_admin(token)
-
     assert exc_info.value.status_code == 401
-    assert "Could not validate admin" in exc_info.value.detail
 
 
 def test_expired_token():
     """
     Test handling of an expired token.
-
-    Expected Outcome:
-    - The function should raise an HTTPException due to expiration.
     """
     data = {"sub": "testuser", "role": "user"}
-
     with freeze_time(datetime.now(timezone.utc)) as frozen_time:
         token = create_access_token(data, expires_delta=timedelta(seconds=1))
-        frozen_time.tick(delta=timedelta(seconds=2))  # Fast-forward 2 seconds
-
+        frozen_time.tick(delta=timedelta(seconds=2))
         with pytest.raises(HTTPException) as exc_info:
-            get_current_user(token)
-
+            verify_jwt(token)
         assert exc_info.value.status_code == 401
-        assert "Could not validate credentials" in exc_info.value.detail

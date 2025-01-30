@@ -8,6 +8,7 @@ Features:
 - Supports role-based control using `UserRole` enum.
 - Automatically sets the creation timestamp for new users.
 - Includes validation for fields such as `email`, `full_name`, and `hashed_password`.
+- Enforces unique email addresses at the database level.
 
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
@@ -30,7 +31,7 @@ class User(Document):
         created_at (datetime): The timestamp of when the user was created.
     """
 
-    email: EmailStr = Field(..., example="jane.doe@example.com")
+    email: EmailStr = Field(..., unique=True, example="jane.doe@example.com")
     full_name: str = Field(..., min_length=3, max_length=100, example="Jane Doe")
     hashed_password: str = Field(..., min_length=8, example="hashed_password_123")
     role: UserRole = Field(default=UserRole.USER, example="user")
@@ -81,9 +82,12 @@ class User(Document):
         Settings for the MongoDB collection for users.
         """
 
-        collection = "users"
+        collection_name = "users"
 
     def __str__(self) -> str:
+        """
+        String representation of the User instance.
+        """
         return (
             f"User(email={self.email}, role={self.role}, created_at={self.created_at})"
         )

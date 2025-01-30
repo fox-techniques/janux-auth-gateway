@@ -5,8 +5,10 @@ This module handles MongoDB connections and user authentication operations using
 
 Features:
 - Connect to MongoDB using a configurable URI.
-- Authenticate users by verifying their username and password.
-- Query users and admins from the database using Beanie models.
+- Authenticate users and admins by verifying their credentials securely.
+- Ensure default admin and tester accounts exist for testing and administration.
+- Implements logging for all critical operations.
+- Uses unique indexing for user and admin email fields to enforce uniqueness.
 
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
@@ -34,21 +36,14 @@ async def init_db() -> None:
         SystemExit: If the MongoDB server is not reachable or authentication fails.
     """
     try:
-        # MongoDB connection URI
-        MONGO_URI = Config.MONGO_URI
-        client = AsyncIOMotorClient(
-            MONGO_URI, serverSelectionTimeoutMS=5000
-        )  # 5-second timeout
+        client = AsyncIOMotorClient(Config.MONGO_URI, serverSelectionTimeoutMS=5000)
         db = client[Config.MONGO_DATABASE_NAME]
 
-        # Attempt to connect and list databases (to check connectivity)
         logger.info("Testing MongoDB connection...")
-        await client.server_info()  # This raises an exception if the server is unreachable
+        await client.server_info()
 
-        # Initialize Beanie with User and Admin models
         await init_beanie(database=db, document_models=[User, Admin])
 
-        # Ensure unique index on email field
         logger.info("Ensuring unique index on email field...")
         await db["Admin"].create_index([("email", 1)], unique=True)
         await db["User"].create_index([("email", 1)], unique=True)
@@ -58,41 +53,26 @@ async def init_db() -> None:
         await ensure_super_admin_exists()
         await ensure_tester_exists()
 
-    except ServerSelectionTimeoutError as timeout_error:
-        logger.critical("Failed to connect to MongoDB: Timeout reached.")
-        logger.critical(f"Error: {timeout_error}")
-        raise SystemExit("MongoDB connection timeout. Application cannot start.")
-
-    except OperationFailure as auth_error:
-        logger.critical("Failed to authenticate with MongoDB.")
-        logger.critical(f"Error: {auth_error}")
-        raise SystemExit("MongoDB authentication failed. Application cannot start.")
-
-    except Exception as general_error:
-        logger.critical("An unexpected error occurred while connecting to MongoDB.")
-        logger.critical(f"Error: {general_error}")
-        raise SystemExit(
-            "Unexpected error during MongoDB initialization. Application cannot start."
-        )
+    except (ServerSelectionTimeoutError, OperationFailure) as e:
+        logger.critical(f"MongoDB connection failed: {e}")
+        raise SystemExit("MongoDB connection failure. Application cannot start.")
+    except Exception as e:
+        logger.critical(f"Unexpected error during MongoDB initialization: {e}")
+        raise SystemExit("Unexpected error. Application cannot start.")
 
 
 async def ensure_super_admin_exists() -> None:
     """
-    Ensure a super admin account exists in the database. Create one if it doesn't.
-
-    Raises:
-        ValueError: If required configuration values are missing.
+    Ensures a super admin account exists in the database. Creates one if it doesn't.
     """
     admin_email = Config.MONGO_SUPER_ADMIN_EMAIL
     admin_password = Config.MONGO_SUPER_ADMIN_PASSWORD
 
     if not admin_email or not admin_password:
         logger.error("Super admin email or password is not configured.")
-        raise ValueError("Super admin email or password is not configured.")
+        return
 
-    existing_admin = await Admin.find_one(Admin.email == admin_email)
-    if not existing_admin:
-
+    if not await Admin.find_one(Admin.email == admin_email):
         admin = Admin(
             email=admin_email,
             full_name="Super Admin",
@@ -105,17 +85,12 @@ async def ensure_super_admin_exists() -> None:
 
 async def ensure_tester_exists() -> None:
     """
-    Ensure a tester account exists in the database. Create one if it doesn't.
-
-    Raises:
-        ValueError: If required configuration values are missing.
+    Ensures a tester account exists in the database. Creates one if it doesn't.
     """
     tester_email = Config.MONGO_TESTER_EMAIL
     tester_password = Config.MONGO_TESTER_PASSWORD
 
-    existing_tester = await User.find_one(User.email == tester_email)
-    if not existing_tester:
-
+    if not await User.find_one(User.email == tester_email):
         tester = User(
             email=tester_email,
             full_name="Tester",
@@ -128,112 +103,31 @@ async def ensure_tester_exists() -> None:
 
 async def authenticate_user(username: str, password: str) -> bool:
     """
-    Authenticate a user by verifying their username and password.
-
-    Args:
-        username (str): The user's email or username.
-        password (str): The user's plain-text password.
-
-    Returns:
-        bool: True if authentication is successful, False otherwise.
+    Authenticates a user by verifying credentials.
     """
     logger.info("Authenticating user...")
-
-    try:
-        user = await username_exists(username)
-
-        if not user:
-            logger.warning("Username does not exist.")
-            return False
-
-        if not verify_password(password, user.hashed_password):
-            logger.warning("Password verification failed.")
-            return False
-
-        logger.info("User authenticated successfully.")
-        return True
-
-    except Exception as e:
-        logger.error(f"Error during user authentication: {e}")
-        return False
-
-
-async def username_exists(username: str) -> Optional[User]:
-    """
-    Check if a username exists in the database.
-
-    Args:
-        username (str): The user's email or username to search for.
-
-    Returns:
-        Optional[User]: The user's data if the username exists, None otherwise.
-    """
-    logger.info("Checking if username exists...")
-
-    try:
-        user = await User.find_one(User.email == username)
-        if not user:
-            logger.info("Username not found in the database.")
-            return None
-
-        logger.info("Username exists in the database.")
-        return user
-    except Exception as e:
-        logger.error(f"Error while checking username existence: {e}")
-        return None
+    user = await username_exists(username)
+    return user and verify_password(password, user.hashed_password)
 
 
 async def authenticate_admin(username: str, password: str) -> bool:
     """
-    Authenticate an admin by verifying their username and password.
-
-    Args:
-        username (str): The admin's email or username.
-        password (str): The admin's plain-text password.
-
-    Returns:
-        bool: True if authentication is successful, False otherwise.
+    Authenticates an admin by verifying credentials.
     """
     logger.info("Authenticating admin...")
+    admin = await admin_username_exists(username)
+    return admin and verify_password(password, admin.hashed_password)
 
-    try:
-        admin = await admin_username_exists(username)
-        if not admin:
-            logger.warning("Admin username does not exist.")
-            return False
 
-        if not verify_password(password, admin.hashed_password):
-            logger.warning("Admin password verification failed.")
-            return False
-
-        logger.info("Admin authenticated successfully.")
-        return True
-
-    except Exception as e:
-        logger.error(f"Error during admin authentication: {e}")
-        return False
+async def username_exists(username: str) -> Optional[User]:
+    """
+    Checks if a username exists in the database.
+    """
+    return await User.find_one(User.email == username)
 
 
 async def admin_username_exists(username: str) -> Optional[Admin]:
     """
-    Check if an admin's username exists in the database.
-
-    Args:
-        username (str): The admin's email or username to search for.
-
-    Returns:
-        Optional[Admin]: The admin's data if the username exists, None otherwise.
+    Checks if an admin's username exists in the database.
     """
-    logger.info("Checking if admin username exists...")
-
-    try:
-        admin = await Admin.find_one(Admin.email == username)
-        if not admin:
-            logger.info("Admin username not found in the database.")
-            return None
-
-        logger.info("Admin username exists in the database.")
-        return admin
-    except Exception as e:
-        logger.error(f"Error while checking admin's username existence: {e}")
-        return None
+    return await Admin.find_one(Admin.email == username)
