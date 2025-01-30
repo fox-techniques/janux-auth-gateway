@@ -16,7 +16,7 @@ Features:
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
 
 
 class UserBase(BaseModel):
@@ -29,7 +29,7 @@ class UserBase(BaseModel):
     """
 
     email: EmailStr = Field(..., example="jane.doe@example.com")
-    full_name: str = Field(..., example="Jane Doe")
+    full_name: str = Field(..., min_length=3, max_length=100, example="Jane Doe")
 
 
 class UserCreate(UserBase):
@@ -45,16 +45,11 @@ class UserCreate(UserBase):
 
     password: str = Field(..., min_length=8, example="Passw0rd123!")
 
-    @validator("password")
+    @field_validator("password")
+    @classmethod
     def validate_password(cls, value: str) -> str:
         """
         Validates the password field to ensure it meets security requirements.
-
-        Args:
-            value (str): The password to validate.
-
-        Returns:
-            str: The validated password.
 
         Raises:
             ValueError: If the password does not meet strength requirements.
@@ -66,6 +61,16 @@ class UserCreate(UserBase):
         if not any(char.isalpha() for char in value):
             raise ValueError("Password must contain at least one letter.")
         return value
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "email": "jane.doe@example.com",
+                "full_name": "Jane Doe",
+                "password": "Passw0rd123!",
+            }
+        }
+    )
 
 
 class UserResponse(UserBase):
@@ -81,6 +86,16 @@ class UserResponse(UserBase):
 
     id: str = Field(..., example="507f1f77bcf86cd799439011")
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "id": "507f1f77bcf86cd799439011",
+                "email": "jane.doe@example.com",
+                "full_name": "Jane Doe",
+            }
+        }
+    )
+
 
 class UserLogin(BaseModel):
     """
@@ -93,3 +108,12 @@ class UserLogin(BaseModel):
 
     email: EmailStr = Field(..., example="jane.doe@example.com")
     password: str = Field(..., min_length=8, example="Passw0rd123!")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "email": "jane.doe@example.com",
+                "password": "Passw0rd123!",
+            }
+        }
+    )

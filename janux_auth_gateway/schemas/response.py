@@ -14,7 +14,7 @@ Features:
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class ConflictResponse(BaseModel):
@@ -26,6 +26,10 @@ class ConflictResponse(BaseModel):
     """
 
     detail: str = Field(..., example="Email already registered.")
+
+    model_config = ConfigDict(
+        json_schema_extra={"example": {"detail": "Email already registered."}}
+    )
 
 
 class ErrorResponse(BaseModel):
@@ -39,3 +43,9 @@ class ErrorResponse(BaseModel):
 
     detail: str = Field(..., example="An unexpected error occurred.")
     code: int = Field(..., example=500)
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {"detail": "An unexpected error occurred.", "code": 500}
+        }
+    )
