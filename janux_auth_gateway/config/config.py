@@ -77,6 +77,8 @@ class Config:
     MONGO_DATABASE_NAME = get_env_variable("MONGO_DATABASE_NAME")
     MONGO_SUPER_ADMIN_EMAIL = get_env_variable("MONGO_SUPER_ADMIN_EMAIL")
     MONGO_SUPER_ADMIN_PASSWORD = get_env_variable("MONGO_SUPER_ADMIN_PASSWORD")
+    MONGO_TESTER_EMAIL = get_env_variable("MONGO_TESTER_EMAIL")
+    MONGO_TESTER_PASSWORD = get_env_variable("MONGO_TESTER_PASSWORD")
 
     @staticmethod
     def validate():

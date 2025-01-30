@@ -18,10 +18,12 @@ The JANUX Authentication Gateway is a modular and extensible authentication micr
 
 ## Key Features
 
-- **Simple Sankey Diagrams**: Easily create source-target pair and customize Sankey diagrams from pandas DataFrames.
-- **Customizable Styles**: Customize colors, labels, node spacing, and flow thickness to suit your needs.
-- **Support for Large Diagrams**: Efficiently handles larger flows and multiple nodes.
-- **Integrates with Pandas**: Easily map columns and rows from pandas DataFrames to nodes and links.
+- Secure password hashing and verification using bcrypt.
+- JWT-based authentication for users and admins.
+- Modular API routing for user, admin, and authentication endpoints.
+- Centralized logging and error handling for better maintainability.
+- MongoDB integration using Beanie ODM.
+- Health check and root endpoint for monitoring.
 ---
 
 ## Quick Links

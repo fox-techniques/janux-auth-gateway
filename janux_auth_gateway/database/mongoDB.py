@@ -48,8 +48,15 @@ async def init_db() -> None:
         # Initialize Beanie with User and Admin models
         await init_beanie(database=db, document_models=[User, Admin])
 
+        # Ensure unique index on email field
+        logger.info("Ensuring unique index on email field...")
+        await db["Admin"].create_index([("email", 1)], unique=True)
+        await db["User"].create_index([("email", 1)], unique=True)
+
         logger.info("Connected to MongoDB and initialized Beanie successfully.")
+
         await ensure_super_admin_exists()
+        await ensure_tester_exists()
 
     except ServerSelectionTimeoutError as timeout_error:
         logger.critical("Failed to connect to MongoDB: Timeout reached.")
@@ -94,6 +101,29 @@ async def ensure_super_admin_exists() -> None:
         )
         await admin.insert()
         logger.info(f"Default admin account created: {admin_email}")
+
+
+async def ensure_tester_exists() -> None:
+    """
+    Ensure a tester account exists in the database. Create one if it doesn't.
+
+    Raises:
+        ValueError: If required configuration values are missing.
+    """
+    tester_email = Config.MONGO_TESTER_EMAIL
+    tester_password = Config.MONGO_TESTER_PASSWORD
+
+    existing_tester = await User.find_one(User.email == tester_email)
+    if not existing_tester:
+
+        tester = User(
+            email=tester_email,
+            full_name="Tester",
+            hashed_password=hash_password(tester_password),
+            role="tester",
+        )
+        await tester.insert()
+        logger.info(f"Default tester account created: {tester_email}")
 
 
 async def authenticate_user(username: str, password: str) -> bool:

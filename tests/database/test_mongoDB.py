@@ -36,9 +36,9 @@ from janux_auth_gateway.config import Config
 async def mock_db(mocker):
     """
     Provides a fully in-memory MongoDB for testing.
-    Ensures Beanie is initialized with a fresh state before each test.
+    Ensures Beanie is initialized.
     """
-    db_name = f"test_db_{uuid.uuid4().hex}"  # Unique DB name per test
+    db_name = f"test_db"
     client = AsyncIOMotorClient("mongodb://localhost:27017")  # In-memory MongoDB
     test_db = client[db_name]
 

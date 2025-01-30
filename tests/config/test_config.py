@@ -14,7 +14,7 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 
 import pytest
 import os
-import secrets  # ✅ Securely generate random secrets
+import secrets  # Securely generate random secrets
 from unittest.mock import patch
 from janux_auth_gateway.config import get_env_variable, Config
 
@@ -59,9 +59,7 @@ def mock_config(mocker):
     """
     mocker.patch.multiple(
         Config,
-        SECRET_KEY=secrets.token_urlsafe(
-            32
-        ),  # ✅ Securely generate a random secret key
+        SECRET_KEY=secrets.token_urlsafe(32),  # Securely generate a random secret key
         ALGORITHM="HS256",
         ACCESS_TOKEN_EXPIRE_MINUTES=30,
         USER_TOKEN_URL="http://localhost/token",
@@ -70,6 +68,8 @@ def mock_config(mocker):
         MONGO_DATABASE_NAME="test_db",
         MONGO_SUPER_ADMIN_EMAIL="admin@example.com",
         MONGO_SUPER_ADMIN_PASSWORD="adminpassword",
+        MONGO_TESTER_EMAIL="tester@example.com",
+        MONGO_TESTER_PASSWORD="testerpassword",
         ALLOWED_ORIGINS="http://localhost",
         CONTAINER=False,
     )
@@ -82,9 +82,7 @@ def test_config_initialization(mock_config):
     Expected Outcome:
     - All environment variables should be loaded correctly.
     """
-    assert (
-        isinstance(Config.SECRET_KEY, str) and len(Config.SECRET_KEY) >= 32
-    )  # ✅ Ensure secret is securely generated
+    assert isinstance(Config.SECRET_KEY, str) and len(Config.SECRET_KEY) >= 32
     assert Config.ALGORITHM == "HS256"
     assert Config.ACCESS_TOKEN_EXPIRE_MINUTES == 30
     assert Config.USER_TOKEN_URL == "http://localhost/token"
@@ -93,6 +91,8 @@ def test_config_initialization(mock_config):
     assert Config.MONGO_DATABASE_NAME == "test_db"
     assert Config.MONGO_SUPER_ADMIN_EMAIL == "admin@example.com"
     assert Config.MONGO_SUPER_ADMIN_PASSWORD == "adminpassword"
+    assert Config.MONGO_TESTER_EMAIL == "tester@example.com"
+    assert Config.MONGO_TESTER_PASSWORD == "testerpassword"
     assert Config.ALLOWED_ORIGINS == "http://localhost"
     assert Config.CONTAINER is False  # Ensures proper boolean conversion
 
