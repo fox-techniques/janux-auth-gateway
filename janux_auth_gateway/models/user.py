@@ -7,13 +7,13 @@ Features:
 - Stores user details such as email, full name, hashed password, and role.
 - Supports role-based control using `UserRole` enum.
 - Automatically sets the creation timestamp for new users.
-- Includes validation for fields such as `full_name`.
+- Includes validation for fields such as `email`, `full_name`, and `hashed_password`.
 
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
 from beanie import Document
-from pydantic import EmailStr, Field
+from pydantic import EmailStr, Field, field_validator, ConfigDict
 from datetime import datetime, timezone
 from .roles import UserRole
 
@@ -30,42 +30,42 @@ class User(Document):
         created_at (datetime): The timestamp of when the user was created.
     """
 
-    email: EmailStr = Field(..., unique=True, example="jane.doe@example.com")
-    full_name: str = Field(..., example="Jane Doe")
-    hashed_password: str = Field(..., example="hashed_password_123")
+    email: EmailStr = Field(..., example="jane.doe@example.com")
+    full_name: str = Field(..., min_length=3, max_length=100, example="Jane Doe")
+    hashed_password: str = Field(..., min_length=8, example="hashed_password_123")
     role: UserRole = Field(default=UserRole.USER, example="user")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+    @field_validator("full_name")
+    @classmethod
     def validate_full_name(cls, value: str) -> str:
         """
         Validates the full name field.
 
-        Args:
-            value (str): The full name of the user.
-
-        Returns:
-            str: The validated full name.
-
         Raises:
-            ValueError: If the full name is empty or invalid.
+            ValueError: If the full name is empty or too short.
         """
         if not value.strip():
             raise ValueError("Full name cannot be empty.")
+        if len(value) < 3:
+            raise ValueError("Full name must be at least 3 characters long.")
         return value
 
-    class Settings:
+    @field_validator("hashed_password")
+    @classmethod
+    def validate_password(cls, value: str) -> str:
         """
-        Settings for the MongoDB collection for users.
-        """
+        Validates the hashed password.
 
-        collection = "users"
-
-    class Config:
+        Raises:
+            ValueError: If the password is too short.
         """
-        Pydantic model configuration for JSON serialization and schema.
-        """
+        if len(value) < 8:
+            raise ValueError("Password must be at least 8 characters long.")
+        return value
 
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "email": "jane.doe@example.com",
                 "full_name": "Jane Doe",
@@ -74,14 +74,16 @@ class User(Document):
                 "created_at": "2025-01-23T12:00:00Z",
             }
         }
+    )
+
+    class Settings:
+        """
+        Settings for the MongoDB collection for users.
+        """
+
+        collection = "users"
 
     def __str__(self) -> str:
-        """
-        String representation of the User instance.
-
-        Returns:
-            str: A string representing the user's details.
-        """
         return (
             f"User(email={self.email}, role={self.role}, created_at={self.created_at})"
         )

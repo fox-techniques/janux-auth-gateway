@@ -1,10 +1,10 @@
 """
-test_admin.py
+test_user.py
 
-Unit tests for the Admin model in the JANUX Authentication Gateway.
+Unit tests for the User model in the JANUX Authentication Gateway.
 
 Tests:
-- Admin model initialization.
+- User model initialization.
 - Full name and password validation.
 - Database insert and retrieval operations.
 - Enforcing unique email constraints.
@@ -17,9 +17,10 @@ import uuid
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import ValidationError
 from beanie import init_beanie
-from janux_auth_gateway.models.admin import Admin
-from janux_auth_gateway.models.roles import AdminRole
+from janux_auth_gateway.models.user import User
+from janux_auth_gateway.models.roles import UserRole
 from janux_auth_gateway.auth.passwords import hash_password
+from pymongo.errors import DuplicateKeyError
 
 
 @pytest.fixture(scope="function")
@@ -34,7 +35,7 @@ async def mock_db():
     test_db = client[db_name]
 
     # Initialize Beanie models for test database
-    await init_beanie(database=test_db, document_models=[Admin])
+    await init_beanie(database=test_db, document_models=[User])
 
     yield test_db  # Provide test DB to tests
 
@@ -43,28 +44,28 @@ async def mock_db():
 
 
 @pytest.mark.asyncio
-async def test_admin_model_initialization(mock_db):
+async def test_user_model_initialization(mock_db):
     """
-    Test the initialization of the Admin model with valid data.
+    Test the initialization of the User model with valid data.
 
     Expected Outcome:
-    - An Admin instance should be created successfully.
+    - A User instance should be created successfully.
     """
-    admin = Admin(
-        email="admin@example.com",
-        full_name="Admin User",
+    user = User(
+        email="jane.doe@example.com",
+        full_name="Jane Doe",
         hashed_password="hashed_password_123",
-        role=AdminRole.SUPER_ADMIN,
+        role=UserRole.USER,
     )
 
-    assert admin.email == "admin@example.com"
-    assert admin.full_name == "Admin User"
-    assert admin.hashed_password == "hashed_password_123"
-    assert admin.role == AdminRole.SUPER_ADMIN
-    assert admin.created_at is not None
+    assert user.email == "jane.doe@example.com"
+    assert user.full_name == "Jane Doe"
+    assert user.hashed_password == "hashed_password_123"
+    assert user.role == UserRole.USER
+    assert user.created_at is not None
 
 
-def test_admin_full_name_validation():
+def test_user_full_name_validation():
     """
     Test validation of the full name field.
 
@@ -74,8 +75,8 @@ def test_admin_full_name_validation():
     with pytest.raises(
         ValidationError, match="String should have at least 3 characters"
     ):
-        Admin(
-            email="admin@example.com",
+        User(
+            email="jane.doe@example.com",
             full_name="",
             hashed_password="hashed_password_123",
         )
@@ -83,14 +84,14 @@ def test_admin_full_name_validation():
     with pytest.raises(
         ValidationError, match="String should have at least 3 characters"
     ):
-        Admin(
-            email="admin@example.com",
+        User(
+            email="jane.doe@example.com",
             full_name="A",
             hashed_password="hashed_password_123",
         )
 
 
-def test_admin_password_validation():
+def test_user_password_validation():
     """
     Test validation of the hashed password field.
 
@@ -100,30 +101,30 @@ def test_admin_password_validation():
     with pytest.raises(
         ValidationError, match="String should have at least 8 characters"
     ):
-        Admin(
-            email="admin@example.com", full_name="Admin User", hashed_password="short"
+        User(
+            email="jane.doe@example.com", full_name="Jane Doe", hashed_password="short"
         )
 
 
 @pytest.mark.asyncio
-async def test_admin_database_insert_and_retrieve(mock_db):
+async def test_user_database_insert_and_retrieve(mock_db):
     """
-    Test inserting and retrieving an Admin document from MongoDB.
+    Test inserting and retrieving a User document from MongoDB.
 
     Expected Outcome:
-    - The inserted admin should be retrievable from the database.
+    - The inserted user should be retrievable from the database.
     """
-    admin = Admin(
-        email="admin@example.com",
-        full_name="Admin User",
+    user = User(
+        email="jane.doe@example.com",
+        full_name="Jane Doe",
         hashed_password=hash_password("securepassword"),
-        role=AdminRole.ADMIN,
+        role=UserRole.USER,
     )
 
-    await admin.insert()
-    retrieved_admin = await Admin.find_one(Admin.email == "admin@example.com")
+    await user.insert()
+    retrieved_user = await User.find_one(User.email == "jane.doe@example.com")
 
-    assert retrieved_admin is not None
-    assert retrieved_admin.email == "admin@example.com"
-    assert retrieved_admin.full_name == "Admin User"
-    assert retrieved_admin.role == AdminRole.ADMIN
+    assert retrieved_user is not None
+    assert retrieved_user.email == "jane.doe@example.com"
+    assert retrieved_user.full_name == "Jane Doe"
+    assert retrieved_user.role == UserRole.USER
