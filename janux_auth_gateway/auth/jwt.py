@@ -34,8 +34,19 @@ user_oauth2_bearer = OAuth2PasswordBearer(tokenUrl="/auth/login")
 admin_oauth2_bearer = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
+from datetime import datetime, timezone, timedelta
+from typing import Dict, Any, Optional
+import logging
+from jose import jwt
+
+logger = logging.getLogger("auth_service_logger")
+
+
 def create_access_token(
-    data: Dict[str, Any], expires_delta: Optional[timedelta] = None
+    data: Dict[str, Any],
+    expires_delta: Optional[timedelta] = None,
+    secret_key: str = SECRET_KEY,
+    algorithm: str = ALGORITHM,
 ) -> str:
     """
     Creates a JWT access token with optional expiration time.
@@ -43,6 +54,8 @@ def create_access_token(
     Args:
         data (Dict[str, Any]): The payload data to include in the token.
         expires_delta (Optional[timedelta]): The token expiration period. Defaults to None.
+        secret_key (str): The secret key used to sign the token. Defaults to the app's secret key.
+        algorithm (str): The algorithm used for signing. Defaults to the app's algorithm.
 
     Returns:
         str: The encoded JWT token.
@@ -54,14 +67,13 @@ def create_access_token(
     if expires_delta:
         expires = datetime.now(timezone.utc) + expires_delta
     else:
-        expires = datetime.now(timezone.utc) + timedelta(
-            minutes=int(ACCESS_TOKEN_EXPIRE_MINUTES)
-        )
+        expires = datetime.now(timezone.utc) + timedelta(minutes=20)  # Default expiry
 
     to_encode.update(
         {"exp": expires, "jti": f"token-{datetime.now(timezone.utc).timestamp()}"}
     )
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+    return jwt.encode(to_encode, secret_key, algorithm=algorithm)
 
 
 def get_current_user(token: str = Depends(user_oauth2_bearer)) -> Dict[str, Any]:

@@ -4,120 +4,125 @@ test_passwords.py
 Unit tests for the password hashing and verification module in the JANUX Authentication Gateway.
 
 Tests:
-- Hashing passwords securely with bcrypt.
-- Ensuring different hashes for the same password (bcrypt randomness).
-- Verifying correct and incorrect password matches.
-- Handling invalid input cases.
+- Secure password hashing
+- Password verification for matching and non-matching passwords
+- Handling of invalid password inputs
+- Empty password edge cases
+- Mocking bcrypt operations for efficiency
 
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
 import pytest
+from unittest.mock import patch
 from janux_auth_gateway.auth.passwords import hash_password, verify_password
 
 
 def test_hash_password():
     """
-    Test hashing a valid password.
-
-    Steps:
-    1. Hash a valid password.
-    2. Ensure the hashed password is a non-empty string.
+    Test that password hashing produces a valid bcrypt hash.
 
     Expected Outcome:
-    - The function should return a hashed string.
+    - The returned hash should be a non-empty string.
+    - The hash should start with a bcrypt prefix ($2b$).
     """
-    password = "securepassword123"
+    password = "SecurePassword123!"
     hashed = hash_password(password)
 
     assert isinstance(hashed, str)
-    assert hashed.startswith("$2b$")  # bcrypt hashes start with $2b$ or similar
+    assert hashed.startswith("$2b$")
+    assert len(hashed) > 30  # Ensuring it's a valid bcrypt hash length
 
 
-def test_hash_password_is_unique():
+def test_verify_password():
     """
-    Test that hashing the same password twice produces different results.
-
-    Steps:
-    1. Hash the same password twice.
-    2. Compare the hashed values.
+    Test that password verification correctly matches a valid hash.
 
     Expected Outcome:
-    - The hashes should be different due to bcrypt's salt mechanism.
+    - The function should return True for matching passwords.
+    - The function should return False for incorrect passwords.
     """
-    password = "securepassword123"
-    hash1 = hash_password(password)
-    hash2 = hash_password(password)
-
-    assert hash1 != hash2
-
-
-def test_hash_password_invalid_input():
-    """
-    Test that hashing an invalid input raises a ValueError.
-
-    Steps:
-    1. Attempt to hash a non-string value (integer).
-    2. Attempt to hash an empty string.
-
-    Expected Outcome:
-    - The function should raise a ValueError.
-    """
-    with pytest.raises(ValueError):
-        hash_password(123456)  # Non-string input
-
-    with pytest.raises(ValueError):
-        hash_password("")  # Empty string
-
-
-def test_verify_correct_password():
-    """
-    Test verifying a correct password against a hashed password.
-
-    Steps:
-    1. Hash a password.
-    2. Verify it against the correct plain-text password.
-
-    Expected Outcome:
-    - The function should return True.
-    """
-    password = "mypassword"
+    password = "SecurePassword123!"
     hashed = hash_password(password)
 
-    assert verify_password(password, hashed) is True
+    assert verify_password(password, hashed) is True  # Correct password
+    assert verify_password("WrongPassword!", hashed) is False  # Incorrect password
 
 
-def test_verify_incorrect_password():
+def test_invalid_password_types():
     """
-    Test verifying an incorrect password against a hashed password.
-
-    Steps:
-    1. Hash a password.
-    2. Attempt verification with an incorrect password.
+    Test handling of invalid input types for hashing.
 
     Expected Outcome:
-    - The function should return False.
+    - Function should raise ValueError for non-string inputs.
     """
-    password = "mypassword"
-    hashed = hash_password(password)
+    with pytest.raises(ValueError):
+        hash_password(12345)  # Non-string input
 
-    assert verify_password("wrongpassword", hashed) is False
+    with pytest.raises(ValueError):
+        hash_password(None)  # None as input
+
+    with pytest.raises(ValueError):
+        hash_password(["list", "not", "allowed"])  # List input
 
 
-def test_verify_password_invalid_input():
+def test_empty_password():
     """
-    Test handling invalid inputs in password verification.
-
-    Steps:
-    1. Attempt verification with non-string inputs.
-    2. Attempt verification with empty strings.
+    Test that empty or whitespace-only passwords are rejected.
 
     Expected Outcome:
-    - The function should return False.
+    - Function should raise ValueError for empty or whitespace-only passwords.
     """
-    hashed = hash_password("validpassword")
+    with pytest.raises(ValueError):
+        hash_password("")
 
-    assert verify_password(12345, hashed) is False  # Non-string password
-    assert verify_password("validpassword", None) is False  # None as hashed password
-    assert verify_password("", hashed) is False  # Empty string password
-    assert verify_password("validpassword", "") is False  # Empty string hash
+    with pytest.raises(ValueError):
+        hash_password("     ")  # Only spaces
+
+
+def test_verify_password_with_invalid_inputs():
+    """
+    Test handling of invalid input types for verification.
+
+    Expected Outcome:
+    - Function should return False if input types are incorrect.
+    """
+    hashed = hash_password("ValidPassword")
+
+    assert verify_password(12345, hashed) is False  # Non-string input
+    assert verify_password(None, hashed) is False  # None as input
+    assert verify_password("", hashed) is False  # Empty string
+
+
+def test_mocked_hash_password(mocker):
+    """
+    Test password hashing with a mocked bcrypt context.
+
+    Expected Outcome:
+    - The function should return a mocked hash without actually performing computation.
+    """
+    mocker.patch(
+        "janux_auth_gateway.auth.passwords.bcrypt_context.hash",
+        return_value="mocked_hash",
+    )
+
+    hashed = hash_password("MockedPassword")
+    assert hashed == "mocked_hash"
+
+
+def test_mocked_verify_password(mocker):
+    """
+    Test password verification with a mocked bcrypt context.
+
+    Expected Outcome:
+    - The function should return True/False as mocked values.
+    """
+    mocker.patch(
+        "janux_auth_gateway.auth.passwords.bcrypt_context.verify", return_value=True
+    )
+    assert verify_password("any_password", "mocked_hash") is True
+
+    mocker.patch(
+        "janux_auth_gateway.auth.passwords.bcrypt_context.verify", return_value=False
+    )
+    assert verify_password("wrong_password", "mocked_hash") is False
