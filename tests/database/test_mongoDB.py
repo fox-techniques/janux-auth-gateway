@@ -24,7 +24,6 @@ from janux_auth_gateway.database.mongoDB import (
     authenticate_user,
     authenticate_admin,
     username_exists,
-    admin_username_exists,
 )
 from janux_auth_gateway.models.user import User
 from janux_auth_gateway.models.admin import Admin

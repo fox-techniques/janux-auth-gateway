@@ -20,7 +20,6 @@ from beanie import init_beanie
 from janux_auth_gateway.models.user import User
 from janux_auth_gateway.models.roles import UserRole
 from janux_auth_gateway.auth.passwords import hash_password
-from pymongo.errors import DuplicateKeyError
 
 
 @pytest.fixture(scope="function")

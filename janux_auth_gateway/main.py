@@ -83,6 +83,20 @@ async def lifespan(app: FastAPI):
 # Create the FastAPI application instance
 app = FastAPI(title="JANUX Authentication Gateway", lifespan=lifespan)
 
+
+# Get allowed origins from Configuration
+origins = Config.ALLOWED_ORIGINS
+
+# Raise a critical security warning if `*` is used in production
+if origins == ["*"] and Config.ENVIRONMENT != "development":
+    logger.critical(
+        "SECURITY WARNING: Allowing all origins (`*`) in CORS is unsafe for production!"
+    )
+    logger.critical(
+        "Update `Config.ALLOWED_ORIGINS` to a specific domain in `.env` or config files."
+    )
+
+# Configure CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins if origins != [""] else ["https://your-secure-domain.com"],
