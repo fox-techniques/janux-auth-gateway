@@ -8,6 +8,7 @@ Features:
 - Handles custom exceptions like AuthenticationError, ValidationError, and DatabaseError.
 - Logs detailed error information for debugging.
 - Registers exception handlers with the FastAPI app.
+- Ensures the application does not fail due to missing configuration attributes.
 
 Usage:
 - Call `register_error_handlers(app)` during FastAPI app initialization.
@@ -34,27 +35,20 @@ logger = get_logger("auth_service_logger")
 def register_error_handlers(app: FastAPI):
     """
     Register custom error handlers with the FastAPI application.
-
-    Args:
-        app (FastAPI): The FastAPI application instance.
     """
 
     @app.exception_handler(Exception)
     async def generic_exception_handler(request: Request, exc: Exception):
         """
         Handle unexpected exceptions and log them.
-
-        Args:
-            request (Request): The request object.
-            exc (Exception): The exception instance.
-
-        Returns:
-            JSONResponse: A 500 Internal Server Error response.
         """
         logger.error(f"Unexpected error: {str(exc)}", exc_info=True)
         response = {"message": "An unexpected error occurred."}
-        if Config.DEBUG:
+
+        # Ensure DEBUG attribute exists before accessing it
+        if getattr(Config, "DEBUG", False):
             response["traceback"] = traceback.format_exc()
+
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content=response,
@@ -64,13 +58,6 @@ def register_error_handlers(app: FastAPI):
     async def authentication_error_handler(request: Request, exc: AuthenticationError):
         """
         Handle authentication errors.
-
-        Args:
-            request (Request): The request object.
-            exc (AuthenticationError): The exception instance.
-
-        Returns:
-            JSONResponse: A 401 Unauthorized response.
         """
         logger.warning(f"Authentication error: {exc.detail}")
         return JSONResponse(
@@ -82,13 +69,6 @@ def register_error_handlers(app: FastAPI):
     async def validation_error_handler(request: Request, exc: ValidationError):
         """
         Handle validation errors.
-
-        Args:
-            request (Request): The request object.
-            exc (ValidationError): The exception instance.
-
-        Returns:
-            JSONResponse: A 422 Unprocessable Entity response.
         """
         logger.warning(f"Validation error: {exc.detail}")
         return JSONResponse(
@@ -102,13 +82,6 @@ def register_error_handlers(app: FastAPI):
     ):
         """
         Handle request validation errors.
-
-        Args:
-            request (Request): The request object.
-            exc (RequestValidationError): The exception instance.
-
-        Returns:
-            JSONResponse: A 422 Unprocessable Entity response.
         """
         logger.warning(f"Validation error: {exc.errors()}")
         return JSONResponse(
@@ -120,13 +93,6 @@ def register_error_handlers(app: FastAPI):
     async def database_error_handler(request: Request, exc: DatabaseError):
         """
         Handle database errors.
-
-        Args:
-            request (Request): The request object.
-            exc (DatabaseError): The exception instance.
-
-        Returns:
-            JSONResponse: A 500 Internal Server Error response.
         """
         logger.error(f"Database error: {exc.detail}")
         return JSONResponse(

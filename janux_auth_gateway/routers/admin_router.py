@@ -14,6 +14,7 @@ Features:
 - Secure password handling and validation.
 - Implements rate-limiting to prevent excessive API calls.
 - Logs detailed admin actions for audit and security.
+- Documents 401 Unauthorized responses for unauthorized access.
 
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
@@ -23,16 +24,22 @@ from starlette import status
 from typing import Annotated, List
 import redis
 
+from janux_auth_gateway.config import Config
 from janux_auth_gateway.schemas.user import UserResponse
 from janux_auth_gateway.auth.jwt import get_current_admin
 from janux_auth_gateway.models.user import User
 from janux_auth_gateway.debug.custom_logger import get_logger
+from janux_auth_gateway.schemas.response import UnauthorizedResponse
 
 # Initialize logger
 logger = get_logger("auth_service_logger")
 
-# Redis instance for rate-limiting admin actions
-redis_client = redis.Redis(host="localhost", port=6379, db=0)
+# Constants
+REDIS_HOST = Config.REDIS_HOST
+REDIS_PORT = Config.REDIS_PORT
+
+# Redis instance for rate-limiting user actions
+redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
 
 # Admin OAuth2 dependency
 AdminDependency = Annotated[dict, Depends(get_current_admin)]
@@ -41,36 +48,13 @@ AdminDependency = Annotated[dict, Depends(get_current_admin)]
 admin_router = APIRouter()
 
 
-def is_rate_limited(admin_id: str) -> bool:
-    """
-    Checks if an admin is rate-limited to prevent excessive API usage.
-
-    Args:
-        admin_id (str): The ID of the admin user.
-
-    Returns:
-        bool: True if the admin is rate-limited, False otherwise.
-    """
-    attempts_key = f"admin_rate_limit:{admin_id}"
-    attempts = redis_client.get(attempts_key)
-    if attempts and int(attempts) >= 10:
-        return True
-    return False
-
-
-def record_admin_action(admin_id: str):
-    """
-    Records an admin action for rate-limiting.
-
-    Args:
-        admin_id (str): The ID of the admin user.
-    """
-    attempts_key = f"admin_rate_limit:{admin_id}"
-    redis_client.incr(attempts_key)
-    redis_client.expire(attempts_key, 900)  # 15-minute reset window
-
-
-@admin_router.get("/users", response_model=List[UserResponse])
+@admin_router.get(
+    "/users",
+    response_model=List[UserResponse],
+    responses={
+        401: {"model": UnauthorizedResponse, "description": "Unauthorized access."}
+    },
+)
 async def list_users(current_admin: AdminDependency):
     """
     Admin-only route to list all users.
@@ -82,18 +66,11 @@ async def list_users(current_admin: AdminDependency):
         List[UserResponse]: A list of all registered users.
 
     Raises:
-        HTTPException: If any unexpected error occurs during the operation or rate-limit is exceeded.
+        HTTPException: If unauthorized (401) or an unexpected error occurs.
     """
-    if is_rate_limited(current_admin["username"]):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many requests. Please try again later.",
-        )
-
     try:
         logger.info(f"Admin endpoint accessed by: {current_admin['username']}")
         users = await User.find_all().to_list()
-        record_admin_action(current_admin["username"])
         return [
             UserResponse(id=str(user.id), email=user.email, full_name=user.full_name)
             for user in users
@@ -106,17 +83,16 @@ async def list_users(current_admin: AdminDependency):
         )
 
 
-@admin_router.delete("/users/{user_id}")
+@admin_router.delete(
+    "/users/{user_id}",
+    responses={
+        401: {"model": UnauthorizedResponse, "description": "Unauthorized access."}
+    },
+)
 async def delete_user(user_id: str, current_admin: AdminDependency):
     """
     Admin-only route to delete a user by ID.
     """
-    if is_rate_limited(current_admin["username"]):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many requests. Please try again later.",
-        )
-
     try:
         logger.info(
             f"Admin deletion endpoint accessed by: {current_admin['username']} for user ID: {user_id}"
@@ -127,7 +103,6 @@ async def delete_user(user_id: str, current_admin: AdminDependency):
                 status_code=status.HTTP_404_NOT_FOUND, detail="User not found."
             )
         await user.delete()
-        record_admin_action(current_admin["username"])
         return {"message": f"User ID {user_id} successfully deleted."}
     except Exception as e:
         logger.error(f"Error deleting user: {e}")
@@ -137,7 +112,12 @@ async def delete_user(user_id: str, current_admin: AdminDependency):
         )
 
 
-@admin_router.get("/profile")
+@admin_router.get(
+    "/profile",
+    responses={
+        401: {"model": UnauthorizedResponse, "description": "Unauthorized access."}
+    },
+)
 async def get_profile(current_admin: AdminDependency):
     """
     Returns the profile of the currently logged-in admin.
@@ -145,7 +125,12 @@ async def get_profile(current_admin: AdminDependency):
     return {"message": "This is your admin profile", "admin": current_admin}
 
 
-@admin_router.post("/logout")
+@admin_router.post(
+    "/logout",
+    responses={
+        401: {"model": UnauthorizedResponse, "description": "Unauthorized access."}
+    },
+)
 async def logout(current_admin: AdminDependency):
     """
     Logs out the currently authenticated admin.

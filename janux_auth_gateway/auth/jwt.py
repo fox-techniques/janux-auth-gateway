@@ -29,12 +29,16 @@ from janux_auth_gateway.debug.custom_logger import get_logger
 # Initialize logger
 logger = get_logger("auth_service_logger")
 
-# Redis instance for token blacklisting
-blacklist = redis.Redis(host="localhost", port=6379, db=0)
-
 # Constants
+REDIS_HOST = Config.REDIS_HOST
+REDIS_PORT = Config.REDIS_PORT
+
 ACCESS_TOKEN_EXPIRE_MINUTES = Config.ACCESS_TOKEN_EXPIRE_MINUTES
 REFRESH_TOKEN_EXPIRE_DAYS = 7
+
+# Redis instance for token blacklisting
+blacklist = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
+
 
 # OAuth2 Bearer configuration
 user_oauth2_bearer = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -66,19 +70,21 @@ def _create_jwt(data: Dict[str, Any], expires_delta: timedelta, key: str) -> str
     return jwt.encode(to_encode, key, algorithm="RS256")
 
 
-def create_access_token(data: Dict[str, Any]) -> str:
+def create_access_token(
+    data: Dict[str, Any], expires_delta: Optional[timedelta] = None
+) -> str:
     """
-    Creates a short-lived access token for user authentication.
+    Creates a JWT access token with optional expiration.
 
     Args:
         data (Dict[str, Any]): The payload data to include in the token.
+        expires_delta (Optional[timedelta]): The token expiration period.
 
     Returns:
         str: A signed JWT access token.
     """
-    return _create_jwt(
-        data, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES), Config.PRIVATE_KEY
-    )
+    expires = expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    return _create_jwt(data, expires, Config.PRIVATE_KEY)
 
 
 def create_refresh_token(data: Dict[str, Any]) -> str:
@@ -111,7 +117,9 @@ def verify_jwt(token: str) -> Dict[str, Any]:
         HTTPException: If the token is expired, invalid, or revoked.
     """
     if blacklist.get(token):  # Check if token is blacklisted
-        raise HTTPException(status_code=401, detail="Token revoked.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token revoked."
+        )
 
     try:
         return jwt.decode(

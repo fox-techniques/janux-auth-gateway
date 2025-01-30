@@ -77,13 +77,6 @@ class Admin(Document):
         }
     )
 
-    class Settings:
-        """
-        Settings for the MongoDB collection for admins.
-        """
-
-        collection_name = "admins"
-
     def __str__(self) -> str:
         """
         String representation of the Admin instance.

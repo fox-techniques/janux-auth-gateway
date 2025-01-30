@@ -103,20 +103,64 @@ async def ensure_tester_exists() -> None:
 
 async def authenticate_user(username: str, password: str) -> bool:
     """
-    Authenticates a user by verifying credentials.
+    Authenticate a user by verifying their username and password.
+
+    Args:
+        username (str): The user's email.
+        password (str): The user's plain-text password.
+
+    Returns:
+        bool: True if authentication is successful, False otherwise.
     """
     logger.info("Authenticating user...")
-    user = await username_exists(username)
-    return user and verify_password(password, user.hashed_password)
+
+    try:
+        user = await username_exists(username)
+        if not user:
+            logger.warning("Username does not exist.")
+            return False
+
+        # Fix: Pass `user.email` as the `user_identifier`
+        if not verify_password(password, user.hashed_password, user.email):
+            logger.warning("Password verification failed.")
+            return False
+
+        logger.info("User authenticated successfully.")
+        return True
+    except Exception as e:
+        logger.error(f"Error during user authentication: {e}")
+        return False
 
 
 async def authenticate_admin(username: str, password: str) -> bool:
     """
-    Authenticates an admin by verifying credentials.
+    Authenticate an admin  by verifying their username and password.
+
+    Args:
+        username (str): The admin's email.
+        password (str): The admin's plain-text password.
+
+    Returns:
+        bool: True if authentication is successful, False otherwise.
     """
     logger.info("Authenticating admin...")
-    admin = await admin_username_exists(username)
-    return admin and verify_password(password, admin.hashed_password)
+
+    try:
+        admin = await admin_username_exists(username)
+        if not admin:
+            logger.warning("Admin username does not exist.")
+            return False
+
+        # Fix: Pass `user.email` as the `user_identifier`
+        if not verify_password(password, admin.hashed_password, admin.email):
+            logger.warning("Admin password verification failed.")
+            return False
+
+        logger.info("Admin authenticated successfully.")
+        return True
+    except Exception as e:
+        logger.error(f"Error during admin authentication: {e}")
+        return False
 
 
 async def username_exists(username: str) -> Optional[User]:

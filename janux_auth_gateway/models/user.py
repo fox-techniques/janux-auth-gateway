@@ -77,13 +77,6 @@ class User(Document):
         }
     )
 
-    class Settings:
-        """
-        Settings for the MongoDB collection for users.
-        """
-
-        collection_name = "users"
-
     def __str__(self) -> str:
         """
         String representation of the User instance.

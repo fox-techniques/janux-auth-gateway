@@ -97,6 +97,10 @@ class Config:
     MONGO_TESTER_EMAIL = get_env_variable("MONGO_TESTER_EMAIL")
     MONGO_TESTER_PASSWORD = get_env_variable("MONGO_TESTER_PASSWORD")
 
+    # REDIS configuration
+    REDIS_HOST = get_env_variable("REDIS_HOST", "localhost")
+    REDIS_PORT = get_env_variable("REDIS_PORT", "6379")
+
     @staticmethod
     def validate():
         """

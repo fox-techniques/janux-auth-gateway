@@ -23,8 +23,9 @@ from starlette import status
 from typing import Annotated
 import redis
 
+from janux_auth_gateway.config import Config
 from janux_auth_gateway.schemas.user import UserCreate, UserResponse
-from janux_auth_gateway.schemas.response import ConflictResponse
+from janux_auth_gateway.schemas.response import ConflictResponse, UnauthorizedResponse
 from janux_auth_gateway.auth.passwords import hash_password
 from janux_auth_gateway.auth.jwt import get_current_user
 from janux_auth_gateway.models.user import User
@@ -33,8 +34,12 @@ from janux_auth_gateway.debug.custom_logger import get_logger
 # Initialize logger
 logger = get_logger("auth_service_logger")
 
+# Constants
+REDIS_HOST = Config.REDIS_HOST
+REDIS_PORT = Config.REDIS_PORT
+
 # Redis instance for rate-limiting user actions
-redis_client = redis.Redis(host="localhost", port=6379, db=0)
+redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
 
 # User OAuth2 dependency
 UserDependency = Annotated[dict, Depends(get_current_user)]
@@ -77,7 +82,8 @@ def record_user_action(user_email: str):
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
     responses={
-        409: {"description": "Email already registered", "model": ConflictResponse}
+        409: {"description": "Email already registered", "model": ConflictResponse},
+        401: {"description": "Unauthorized access", "model": UnauthorizedResponse},
     },
 )
 async def register_user(user: UserCreate):
@@ -110,7 +116,12 @@ async def register_user(user: UserCreate):
     )
 
 
-@user_router.get("/profile")
+@user_router.get(
+    "/profile",
+    responses={
+        401: {"description": "Unauthorized access", "model": UnauthorizedResponse}
+    },
+)
 async def get_profile(current_user: UserDependency):
     """
     Returns the profile of the currently logged-in user.
@@ -118,7 +129,12 @@ async def get_profile(current_user: UserDependency):
     return {"message": "This is your profile", "user": current_user}
 
 
-@user_router.post("/logout")
+@user_router.post(
+    "/logout",
+    responses={
+        401: {"description": "Unauthorized access", "model": UnauthorizedResponse}
+    },
+)
 async def logout(current_user: UserDependency):
     """
     Logs out the currently authenticated user.
