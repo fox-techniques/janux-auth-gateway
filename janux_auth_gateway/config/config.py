@@ -9,7 +9,7 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 
 import os
 from dotenv import load_dotenv, find_dotenv
-from typing import Optional
+from typing import Optional, Set
 
 # Determine the environment and load the appropriate .env file
 env = os.getenv("ENVIRONMENT", "local")
@@ -58,12 +58,30 @@ class Config:
 
     # Application configuration
     ENVIRONMENT = env
-    ALLOWED_ORIGINS = get_env_variable("ALLOWED_ORIGINS", [""])
-    CONTAINER = bool(get_env_variable("CONTAINER", False))
+    ALLOWED_ORIGINS = get_env_variable("ALLOWED_ORIGINS", "").split(
+        ","
+    )  # Supports multiple origins
+    CONTAINER = get_env_variable("CONTAINER", "False").lower() in ["true", "1"]
 
     # JWT configuration
     SECRET_KEY = get_env_variable("AUTH_SECRET_KEY")
+
+    # Ensure SECRET_KEY meets security requirements
+    if len(SECRET_KEY) < 32:
+        raise ValueError("SECRET_KEY must be at least 32 characters long for security.")
+
+    ALLOWED_ALGORITHMS: Set[str] = {
+        "HS256",
+        "RS256",
+        "ES256",
+    }  # Restrict allowed algorithms
     ALGORITHM = get_env_variable("AUTH_ALGORITHM", "HS256")
+
+    if ALGORITHM not in ALLOWED_ALGORITHMS:
+        raise ValueError(
+            f"Invalid JWT algorithm. Secure algorithms allowed: HS256, RS256, ES256"
+        )
+
     ACCESS_TOKEN_EXPIRE_MINUTES = int(
         get_env_variable("ACCESS_TOKEN_EXPIRE_MINUTES", "20")
     )
@@ -89,7 +107,7 @@ class Config:
             ValueError: If any required environment variable is missing or invalid.
         """
         validators = {
-            "SECRET_KEY": lambda v: len(v) >= 32,
+            "SECRET_KEY": lambda v: len(v) >= 32 and isinstance(v, str),
             "MONGO_URI": lambda v: v.startswith("mongodb://")
             or v.startswith("mongodb+srv://"),
         }

@@ -34,14 +34,6 @@ user_oauth2_bearer = OAuth2PasswordBearer(tokenUrl="/auth/login")
 admin_oauth2_bearer = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
-from datetime import datetime, timezone, timedelta
-from typing import Dict, Any, Optional
-import logging
-from jose import jwt
-
-logger = logging.getLogger("auth_service_logger")
-
-
 def create_access_token(
     data: Dict[str, Any],
     expires_delta: Optional[timedelta] = None,
