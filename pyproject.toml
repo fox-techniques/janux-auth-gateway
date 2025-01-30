@@ -15,7 +15,7 @@ packages = [
 python = "^3.10"
 fastapi = {extras = ["standard"], version = "^0.115.6"}
 uvicorn = "^0.34.0"
-python-jose = "^3.3.0"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 python-multipart = "^0.0.20"
 python-dotenv = "^1.0.1"
