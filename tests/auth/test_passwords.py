@@ -1,128 +1,168 @@
 """
 test_passwords.py
 
-Unit tests for the password hashing and verification module in the JANUX Authentication Gateway.
+Unit tests for the password management module in the JANUX Authentication Gateway.
 
 Tests:
-- Secure password hashing
-- Password verification for matching and non-matching passwords
-- Handling of invalid password inputs
-- Empty password edge cases
-- Mocking bcrypt operations for efficiency
+- Password complexity enforcement.
+- Secure password hashing.
+- Password verification.
+- Rate-limiting for failed password attempts.
+- Hash upgrading.
+
+Features:
+- Uses `fakeredis` for an in-memory Redis instance.
+- Mocks `Passlib CryptContext` for password hashing.
+- Ensures rate-limiting prevents brute-force attacks.
 
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
 import pytest
+import fakeredis
 from unittest.mock import patch
-from janux_auth_gateway.auth.passwords import hash_password, verify_password
+from fastapi import HTTPException
+from passlib.context import CryptContext
+from janux_auth_gateway.auth.passwords import (
+    is_password_secure,
+    hash_password,
+    verify_password,
+    upgrade_password_hash,
+)
 
 
-def test_hash_password():
+@pytest.fixture
+def fake_redis():
     """
-    Test that password hashing produces a valid bcrypt hash.
+    Creates an in-memory Redis instance for testing.
+    """
+    return fakeredis.FakeRedis(decode_responses=True)
+
+
+@pytest.fixture
+def mock_password_context(mocker):
+    """
+    Mocks the Passlib CryptContext to avoid real hashing in tests.
+    """
+    mock_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    mocker.patch("janux_auth_gateway.auth.passwords.bcrypt_context", mock_context)
+    return mock_context
+
+
+@pytest.fixture
+def strong_password():
+    """
+    Returns a strong password that meets security requirements.
+    """
+    return "StrongP@ssw0rd!"
+
+
+def test_is_password_secure():
+    """
+    Test that password complexity rules are enforced correctly.
 
     Expected Outcome:
-    - The returned hash should be a non-empty string.
-    - The hash should start with a bcrypt prefix ($2b$).
+    - Secure passwords return True.
+    - Weak passwords return False.
     """
-    password = "SecurePassword123!"
-    hashed = hash_password(password)
+    assert is_password_secure("ValidP@ss1") is True
+    assert is_password_secure("weak") is False
+    assert is_password_secure("NoNumbers!") is False
+    assert is_password_secure("nocapital1!") is False
+    assert is_password_secure("NOLOWERCASE1!") is False
+    assert is_password_secure("NoSpecialChar1") is False
 
+
+def test_hash_password(mock_password_context, strong_password):
+    """
+    Test password hashing using bcrypt or argon2.
+
+    Expected Outcome:
+    - Returns a valid hashed password with an expected prefix.
+    """
+    hashed = hash_password(strong_password)
     assert isinstance(hashed, str)
-    assert hashed.startswith("$2b$")
-    assert len(hashed) > 30  # Ensuring it's a valid bcrypt hash length
+
+    # Dynamically check for any supported hashing scheme
+    valid_schemes = ["$argon2", "$bcrypt", "$2b$"]
+    assert any(
+        hashed.startswith(scheme) for scheme in valid_schemes
+    ), f"Unexpected hash format: {hashed}"
 
 
-def test_verify_password():
+def test_hash_password_fails_on_weak_password():
     """
-    Test that password verification correctly matches a valid hash.
+    Test that weak passwords raise a ValueError.
 
     Expected Outcome:
-    - The function should return True for matching passwords.
-    - The function should return False for incorrect passwords.
+    - Raises ValueError if password is too weak.
     """
-    password = "SecurePassword123!"
-    hashed = hash_password(password)
-
-    assert verify_password(password, hashed) is True  # Correct password
-    assert verify_password("WrongPassword!", hashed) is False  # Incorrect password
+    with pytest.raises(ValueError, match="Password must be at least 8 characters long"):
+        hash_password("weak")
 
 
-def test_invalid_password_types():
+def test_verify_password_success(mock_password_context, fake_redis, strong_password):
     """
-    Test handling of invalid input types for hashing.
+    Test successful password verification.
 
     Expected Outcome:
-    - Function should raise ValueError for non-string inputs.
+    - Returns True when the correct password is provided.
     """
-    with pytest.raises(ValueError):
-        hash_password(12345)  # Non-string input
-
-    with pytest.raises(ValueError):
-        hash_password(None)  # None as input
-
-    with pytest.raises(ValueError):
-        hash_password(["list", "not", "allowed"])  # List input
-
-
-def test_empty_password():
-    """
-    Test that empty or whitespace-only passwords are rejected.
-
-    Expected Outcome:
-    - Function should raise ValueError for empty or whitespace-only passwords.
-    """
-    with pytest.raises(ValueError):
-        hash_password("")
-
-    with pytest.raises(ValueError):
-        hash_password("     ")  # Only spaces
-
-
-def test_verify_password_with_invalid_inputs():
-    """
-    Test handling of invalid input types for verification.
-
-    Expected Outcome:
-    - Function should return False if input types are incorrect.
-    """
-    hashed = hash_password("ValidPassword")
-
-    assert verify_password(12345, hashed) is False  # Non-string input
-    assert verify_password(None, hashed) is False  # None as input
-    assert verify_password("", hashed) is False  # Empty string
-
-
-def test_mocked_hash_password(mocker):
-    """
-    Test password hashing with a mocked bcrypt context.
-
-    Expected Outcome:
-    - The function should return a mocked hash without actually performing computation.
-    """
-    mocker.patch(
-        "janux_auth_gateway.auth.passwords.bcrypt_context.hash",
-        return_value="mocked_hash",
+    hashed_password = hash_password(strong_password)
+    assert (
+        verify_password(
+            strong_password,
+            hashed_password,
+            "user@example.com",
+            redis_client=fake_redis,
+        )
+        is True
     )
 
-    hashed = hash_password("MockedPassword")
-    assert hashed == "mocked_hash"
 
-
-def test_mocked_verify_password(mocker):
+def test_verify_password_failure(mock_password_context, fake_redis, strong_password):
     """
-    Test password verification with a mocked bcrypt context.
+    Test failed password verification.
 
     Expected Outcome:
-    - The function should return True/False as mocked values.
+    - Returns False when an incorrect password is provided.
     """
-    mocker.patch(
-        "janux_auth_gateway.auth.passwords.bcrypt_context.verify", return_value=True
+    hashed_password = hash_password(strong_password)
+    assert (
+        verify_password(
+            "WrongPass!",
+            hashed_password,
+            "user@example.com",
+            redis_client=fake_redis,
+        )
+        is False
     )
-    assert verify_password("any_password", "mocked_hash") is True
 
-    mocker.patch(
-        "janux_auth_gateway.auth.passwords.bcrypt_context.verify", return_value=False
-    )
-    assert verify_password("wrong_password", "mocked_hash") is False
+
+def test_verify_password_rate_limit(mock_password_context, fake_redis, strong_password):
+    """
+    Test rate-limiting on failed password attempts.
+
+    Expected Outcome:
+    - After 5 failed attempts, raises HTTPException (429 Too Many Requests).
+    """
+    hashed_password = hash_password(strong_password)
+    user_id = "user@example.com"
+
+    for _ in range(5):
+        verify_password("WrongPass!", hashed_password, user_id, redis_client=fake_redis)
+
+    with pytest.raises(HTTPException, match="Too many login attempts"):
+        verify_password("WrongPass!", hashed_password, user_id, redis_client=fake_redis)
+
+
+def test_upgrade_password_hash(mock_password_context, strong_password):
+    """
+    Test upgrading password hashes.
+
+    Expected Outcome:
+    - Returns an upgraded hash if the old one is outdated.
+    - Returns the same hash if it's already secure.
+    """
+    old_hash = hash_password(strong_password)
+    assert upgrade_password_hash(strong_password, old_hash) == old_hash

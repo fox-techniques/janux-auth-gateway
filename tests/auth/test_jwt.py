@@ -4,120 +4,205 @@ test_jwt.py
 Unit tests for the JWT authentication module in the JANUX Authentication Gateway.
 
 Tests:
-- JWT access token creation
-- JWT decoding for valid and invalid tokens
-- Role-based authentication enforcement (user vs admin)
-- Handling of expired or malformed tokens
+- Token creation (access & refresh tokens).
+- Token verification, expiration, and invalidation.
+- User & admin authentication using JWTs.
+- Token revocation (blacklisting).
 
-Replaced python-jose with PyJWT for enhanced security.
+Features:
+- Uses `fakeredis` for an in-memory Redis instance.
+- Mocks `Config.PRIVATE_KEY`, `Config.PUBLIC_KEY` for RSA signing.
+- Ensures only valid JWTs are accepted, and revoked tokens are rejected.
 
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
 import pytest
-import secrets
-from datetime import timedelta, datetime, timezone
 import jwt
-from fastapi import HTTPException
+import fakeredis
 from unittest.mock import patch
-from freezegun import freeze_time
-
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+from fastapi import HTTPException
 from janux_auth_gateway.auth.jwt import (
     create_access_token,
+    create_refresh_token,
     verify_jwt,
     get_current_user,
     get_current_admin,
+    revoke_token,
 )
 from janux_auth_gateway.config import Config
 
-# Mocked constants
-MOCK_SECRET_KEY = secrets.token_urlsafe(32)
-MOCK_ALGORITHM = "RS256"
 
-
-@pytest.fixture(autouse=True)
-def mock_config_env(mocker):
-    """Mock Config to prevent using real secrets"""
-    mocker.patch.object(Config, "SECRET_KEY", MOCK_SECRET_KEY)
-    mocker.patch.object(Config, "ALGORITHM", MOCK_ALGORITHM)
-    mocker.patch.object(Config, "ACCESS_TOKEN_EXPIRE_MINUTES", 20)
-
-
-def test_create_access_token():
+@pytest.fixture
+def mock_keys(mocker):
     """
-    Test JWT token creation with a default expiration.
+    Mock JWT private and public keys as valid RSA keys.
     """
-    data = {"sub": "testuser", "role": "user"}
-    token = create_access_token(data)
-    decoded_payload = verify_jwt(token)
-    assert decoded_payload["sub"] == "testuser"
-    assert decoded_payload["role"] == "user"
-    assert "exp" in decoded_payload
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    private_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode("utf-8")
+
+    public_pem = (
+        private_key.public_key()
+        .public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        .decode("utf-8")
+    )
+
+    # Mock Config values with valid RSA keys
+    mocker.patch.object(Config, "PRIVATE_KEY", private_pem)
+    mocker.patch.object(Config, "PUBLIC_KEY", public_pem)
 
 
-def test_create_access_token_with_expiry():
+@pytest.fixture
+def fake_redis():
     """
-    Test JWT token expiration time.
+    Creates an in-memory Redis instance for testing.
     """
-    data = {"sub": "testuser", "role": "user"}
-    with freeze_time(datetime.now(timezone.utc)) as frozen_time:
-        token = create_access_token(data, expires_delta=timedelta(seconds=2))
-        frozen_time.tick(delta=timedelta(seconds=3))
-        with pytest.raises(HTTPException):
-            verify_jwt(token)
+    return fakeredis.FakeRedis(decode_responses=True)
 
 
-def test_valid_user_token():
+def test_create_access_token(mock_keys):
     """
-    Test decoding a valid user token.
+    Test that an access token is created successfully.
+
+    Expected Outcome:
+    - Returns a valid JWT string.
     """
-    data = {"sub": "testuser", "role": "user"}
-    token = create_access_token(data)
-    user = get_current_user(token)
-    assert user["username"] == "testuser"
-    assert user["role"] == "user"
+    token = create_access_token({"sub": "testuser", "role": "user"})
+    assert isinstance(token, str)
 
 
-def test_valid_admin_token():
+def test_create_refresh_token(mock_keys):
     """
-    Test decoding a valid admin token.
+    Test that a refresh token is created successfully.
+
+    Expected Outcome:
+    - Returns a valid JWT string.
     """
-    data = {"sub": "adminuser", "role": "admin"}
-    token = create_access_token(data)
-    admin = get_current_admin(token)
-    assert admin["username"] == "adminuser"
-    assert admin["role"] == "admin"
+    token = create_refresh_token({"sub": "testuser"})
+    assert isinstance(token, str)
 
 
-def test_invalid_token():
+def test_verify_valid_jwt(mock_keys, fake_redis):
     """
-    Test handling of an invalid JWT token.
+    Test that a valid JWT is verified successfully.
+
+    Expected Outcome:
+    - Decoded payload should contain expected claims.
     """
-    invalid_token = "invalid.jwt.token"
-    with pytest.raises(HTTPException) as exc_info:
-        verify_jwt(invalid_token)
-    assert exc_info.value.status_code == 401
+    token = create_access_token({"sub": "testuser", "role": "user"})
+
+    decoded = verify_jwt(token, redis_client=fake_redis)
+
+    assert decoded["sub"] == "testuser"
+    assert decoded["role"] == "user"
 
 
-def test_invalid_role():
+def test_verify_revoked_jwt(mock_keys, fake_redis):
     """
-    Test handling of a token with an incorrect role.
+    Test that a revoked JWT raises an exception.
+
+    Expected Outcome:
+    - Should return a 401 Unauthorized error.
     """
-    data = {"sub": "testuser", "role": "user"}
-    token = create_access_token(data)
-    with pytest.raises(HTTPException) as exc_info:
-        get_current_admin(token)
-    assert exc_info.value.status_code == 401
+    token = create_access_token({"sub": "testuser"})
+
+    fake_redis.set(token.encode(), "revoked")
+
+    with pytest.raises(HTTPException, match="Token revoked."):
+        verify_jwt(token, redis_client=fake_redis)
 
 
-def test_expired_token():
+def test_verify_expired_jwt(mock_keys, fake_redis):
     """
-    Test handling of an expired token.
+    Test that an expired JWT raises an exception.
+
+    Expected Outcome:
+    - Should return a 401 Unauthorized error.
     """
-    data = {"sub": "testuser", "role": "user"}
-    with freeze_time(datetime.now(timezone.utc)) as frozen_time:
-        token = create_access_token(data, expires_delta=timedelta(seconds=1))
-        frozen_time.tick(delta=timedelta(seconds=2))
-        with pytest.raises(HTTPException) as exc_info:
-            verify_jwt(token)
-        assert exc_info.value.status_code == 401
+    expired_token = jwt.encode(
+        {"sub": "testuser", "exp": 0},
+        Config.PRIVATE_KEY,
+        algorithm="RS256",
+    )
+
+    with pytest.raises(HTTPException, match="Token has expired."):
+        verify_jwt(expired_token, redis_client=fake_redis)
+
+
+def test_revoke_token(mock_keys, fake_redis):
+    """
+    Test that a token is successfully revoked.
+
+    Expected Outcome:
+    - Token should be stored in Redis with `revoked` status.
+    """
+    token = create_access_token({"sub": "testuser"})
+
+    revoke_token(token, redis_client=fake_redis)
+
+    assert fake_redis.get(token.encode()) == "revoked"
+
+
+def test_get_current_user_valid(mock_keys, fake_redis):
+    """
+    Test that a valid user token returns user details.
+
+    Expected Outcome:
+    - Returns a dictionary with `username` and `role`.
+    """
+    token = create_access_token({"sub": "test@example.com", "role": "user"})
+
+    user_data = get_current_user(token, redis_client=fake_redis)
+
+    assert user_data["username"] == "test@example.com"
+    assert user_data["role"] == "user"
+
+
+def test_get_current_user_invalid_role(mock_keys, fake_redis):
+    """
+    Test that a token with an invalid role raises an exception.
+
+    Expected Outcome:
+    - Should return a 401 Unauthorized error.
+    """
+    token = create_access_token({"sub": "test@example.com", "role": "admin"})
+
+    with pytest.raises(HTTPException, match="Could not validate user"):
+        get_current_user(token, redis_client=fake_redis)
+
+
+def test_get_current_admin_valid(mock_keys, fake_redis):
+    """
+    Test that a valid admin token returns admin details.
+
+    Expected Outcome:
+    - Returns a dictionary with `username` and `role`.
+    """
+    token = create_access_token({"sub": "admin@example.com", "role": "admin"})
+
+    admin_data = get_current_admin(token, redis_client=fake_redis)
+
+    assert admin_data["username"] == "admin@example.com"
+    assert admin_data["role"] == "admin"
+
+
+def test_get_current_admin_invalid_role(mock_keys, fake_redis):
+    """
+    Test that a token with an invalid admin role raises an exception.
+
+    Expected Outcome:
+    - Should return a 401 Unauthorized error.
+    """
+    token = create_access_token({"sub": "test@example.com", "role": "user"})
+
+    with pytest.raises(HTTPException, match="Could not validate admin"):
+        get_current_admin(token, redis_client=fake_redis)

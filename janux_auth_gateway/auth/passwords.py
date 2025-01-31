@@ -19,10 +19,18 @@ import re
 import redis
 from passlib.context import CryptContext
 from fastapi import HTTPException
+from janux_auth_gateway.config import Config
 from janux_auth_gateway.debug.custom_logger import get_logger
 
 # Initialize logger
 logger = get_logger("auth_service_logger")
+
+# Constants
+REDIS_HOST = Config.REDIS_HOST
+REDIS_PORT = Config.REDIS_PORT
+
+
+redis_instance = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
 
 # Configure the password hashing context with Argon2 and bcrypt
 bcrypt_context = CryptContext(schemes=["argon2", "bcrypt"], deprecated="auto")
@@ -38,12 +46,24 @@ def is_password_secure(password: str) -> bool:
     Returns:
         bool: True if the password meets complexity requirements, False otherwise.
     """
+
+
+def is_password_secure(password: str) -> bool:
+    """
+    Checks if a password meets security requirements.
+
+    Args:
+        password (str): The password to check.
+
+    Returns:
+        bool: True if the password meets complexity requirements, False otherwise.
+    """
     return (
         len(password) >= 8
-        and re.search(r"[A-Z]", password)
-        and re.search(r"[a-z]", password)
-        and re.search(r"[0-9]", password)
-        and re.search(r"[!@#$%^&*(),.?\":{}|<>]", password)
+        and bool(re.search(r"[A-Z]", password))
+        and bool(re.search(r"[a-z]", password))
+        and bool(re.search(r"[0-9]", password))
+        and bool(re.search(r"[!@#$%^&*(),.?\":{}|<>]", password))
     )
 
 
@@ -81,7 +101,10 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(
-    plain_password: str, hashed_password: str, user_identifier: str
+    plain_password: str,
+    hashed_password: str,
+    user_identifier: str,
+    redis_client=redis_instance,
 ) -> bool:
     """
     Verifies a plain-text password against a securely hashed password and implements rate-limiting.
@@ -90,6 +113,7 @@ def verify_password(
         plain_password (str): The plain-text password to verify.
         hashed_password (str): The hashed password stored in the database.
         user_identifier (str): A unique identifier for the user (email or ID).
+        redis_client (redis.Redis): The Redis client for rate-limiting. Defaults to real Redis instance.
 
     Returns:
         bool: True if the password matches, False otherwise.
@@ -111,8 +135,6 @@ def verify_password(
         logger.error("Passwords cannot be empty.")
         raise ValueError("Passwords cannot be empty.")
 
-    # Rate-limit password attempts (max 5 attempts per 15 minutes)
-    redis_client = redis.Redis(host="localhost", port=6379, db=0)
     attempts_key = f"login_attempts:{user_identifier}"
     attempts = redis_client.get(attempts_key)
 

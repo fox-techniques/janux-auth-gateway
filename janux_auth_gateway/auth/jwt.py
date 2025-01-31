@@ -103,12 +103,13 @@ def create_refresh_token(data: Dict[str, Any]) -> str:
     )
 
 
-def verify_jwt(token: str) -> Dict[str, Any]:
+def verify_jwt(token: str, redis_client=blacklist) -> Dict[str, Any]:
     """
     Verifies a JWT token, ensuring issuer and audience match, and checks if the token is revoked.
 
     Args:
         token (str): The JWT token to be verified.
+        redis_client (redis.Redis): Redis instance (default is the real Redis server).
 
     Returns:
         Dict[str, Any]: The decoded JWT payload if valid.
@@ -116,7 +117,7 @@ def verify_jwt(token: str) -> Dict[str, Any]:
     Raises:
         HTTPException: If the token is expired, invalid, or revoked.
     """
-    if blacklist.get(token):  # Check if token is blacklisted
+    if redis_client.get(token.encode()):  # Check if token is blacklisted
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Token revoked."
         )
@@ -139,12 +140,16 @@ def verify_jwt(token: str) -> Dict[str, Any]:
         )
 
 
-def get_current_user(token: str = Depends(user_oauth2_bearer)) -> Dict[str, Any]:
+def get_current_user(
+    token: str = Depends(user_oauth2_bearer),
+    redis_client=blacklist,
+) -> Dict[str, Any]:
     """
     Retrieves the current user's details from the JWT token.
 
     Args:
         token (str): The JWT token provided by the user.
+        redis_client (redis.Redis): Redis instance. Defaults to the real Redis server
 
     Returns:
         Dict[str, Any]: The decoded user information.
@@ -152,21 +157,26 @@ def get_current_user(token: str = Depends(user_oauth2_bearer)) -> Dict[str, Any]
     Raises:
         HTTPException: If the user role is invalid.
     """
-    logger.info("Getting current user...")
-    payload = verify_jwt(token)
+    payload = verify_jwt(token, redis_client=redis_client)
+
     if payload.get("role") != "user":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate user"
         )
+
     return {"username": payload["sub"], "role": payload["role"]}
 
 
-def get_current_admin(token: str = Depends(admin_oauth2_bearer)) -> Dict[str, Any]:
+def get_current_admin(
+    token: str = Depends(admin_oauth2_bearer),
+    redis_client=blacklist,
+) -> Dict[str, Any]:
     """
     Retrieves the current admin's details from the JWT token.
 
     Args:
         token (str): The JWT token provided by the admin.
+        redis_client (redis.Redis): Redis instance. Defaults to the real Redis server
 
     Returns:
         Dict[str, Any]: The decoded admin information.
@@ -174,24 +184,28 @@ def get_current_admin(token: str = Depends(admin_oauth2_bearer)) -> Dict[str, An
     Raises:
         HTTPException: If the admin role is invalid.
     """
-    logger.info("Getting current admin...")
-    payload = verify_jwt(token)
+    payload = verify_jwt(token, redis_client=redis_client)
+
     if payload.get("role") != "admin":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate admin"
         )
+
     return {"username": payload["sub"], "role": payload["role"]}
 
 
-def revoke_token(token: str):
+def revoke_token(token: str, redis_client=blacklist):
     """
     Revokes a given token by adding it to the blacklist.
 
     Args:
         token (str): The JWT token to be revoked.
+        redis_client (redis.Redis): Redis instance (default is the real Redis server).
 
     Returns:
         None
     """
-    blacklist.set(token, "revoked", ex=ACCESS_TOKEN_EXPIRE_MINUTES * 60)
-    logger.info("Token revoked successfully.")
+    redis_client.set(
+        token.encode(), "revoked", ex=Config.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    )
+    logger.info(f"Token revoked successfully: {token}")

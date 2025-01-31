@@ -28,37 +28,32 @@ from janux_auth_gateway.models.admin import Admin
 logger = get_logger("auth_service_logger")
 
 
-async def init_db() -> None:
+async def init_db(test_db=None) -> None:
     """
     Initialize the MongoDB database connection with Beanie.
+    Allows using a test database for unit testing.
+
+    Args:
+        test_db (Optional[AsyncIOMotorClient]): A test database instance.
 
     Raises:
         SystemExit: If the MongoDB server is not reachable or authentication fails.
     """
     try:
-        client = AsyncIOMotorClient(Config.MONGO_URI, serverSelectionTimeoutMS=5000)
+        client = test_db or AsyncIOMotorClient(Config.MONGO_URI)
         db = client[Config.MONGO_DATABASE_NAME]
 
-        logger.info("Testing MongoDB connection...")
-        await client.server_info()
-
+        logger.info("Initializing database connection...")
         await init_beanie(database=db, document_models=[User, Admin])
-
-        logger.info("Ensuring unique index on email field...")
-        await db["Admin"].create_index([("email", 1)], unique=True)
-        await db["User"].create_index([("email", 1)], unique=True)
 
         logger.info("Connected to MongoDB and initialized Beanie successfully.")
 
-        await ensure_super_admin_exists()
-        await ensure_tester_exists()
-
-    except (ServerSelectionTimeoutError, OperationFailure) as e:
-        logger.critical(f"MongoDB connection failed: {e}")
-        raise SystemExit("MongoDB connection failure. Application cannot start.")
-    except Exception as e:
-        logger.critical(f"Unexpected error during MongoDB initialization: {e}")
-        raise SystemExit("Unexpected error. Application cannot start.")
+    except ServerSelectionTimeoutError:
+        raise SystemExit("MongoDB connection timeout.")
+    except OperationFailure:
+        raise SystemExit("MongoDB authentication failed.")
+    except Exception as general_error:
+        raise SystemExit(f"Unexpected MongoDB error: {general_error}")
 
 
 async def ensure_super_admin_exists() -> None:
