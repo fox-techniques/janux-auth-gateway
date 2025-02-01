@@ -33,8 +33,6 @@ from janux_auth_gateway.database.mongoDB import (
 )
 from janux_auth_gateway.models.user import User
 from janux_auth_gateway.models.admin import Admin
-from janux_auth_gateway.auth.passwords import hash_password
-from janux_auth_gateway.config import Config
 
 
 @pytest.fixture(scope="function")
@@ -56,8 +54,21 @@ async def mock_db(mocker):
     # Initialize Beanie models for test database
     await init_beanie(database=test_db, document_models=[User, Admin])
 
-    test_admin = ("test.super.admin@example.com", "TestSuperAdminPassw0rd123!")
-    test_user = ("test.user@example.com", "TestUserPassw0rd123!")
+    await test_db["Admin"].create_index([("email", 1)], unique=True)
+    await test_db["User"].create_index([("email", 1)], unique=True)
+
+    test_admin = (
+        "test.super.admin@example.com",
+        "TestSuperAdminPassw0rd123!",
+        "Test SuperAdminovski",
+        "super_admin",
+    )
+    test_user = (
+        "test.user@example.com",
+        "TestUserPassw0rd123!",
+        "Test TestUserovski",
+        "user",
+    )
 
     # Create default accounts (super admin & tester) in the test database
     await create_admin_account(*test_admin)
@@ -66,51 +77,57 @@ async def mock_db(mocker):
     yield test_db, test_admin, test_user  # Provide test DB to tests
 
     # Cleanup: Drop test database after each test
-    # await client.drop_database(db_name)
+    await client.drop_database(db_name)
 
 
 @pytest.mark.asyncio
-async def test_create_super_admin_account(mock_db):
+async def test_create_admin_account(mock_db):
     """
-    Test that `create_super_admin_account()` correctly creates a super admin in the test DB.
+    Test creation of an admin account.
 
     Expected Outcome:
-    - If no super admin exists, one should be created.
+    - A new admin account should be added to the database.
     """
     test_db, test_admin, _ = mock_db
-    email, password = test_admin
+    email, password, full_name, role = test_admin
 
-    # Ensure the super admin does not exist before the test
+    # Ensure no admin exists before the test
     assert await Admin.find_one(Admin.email == email) is not None
 
-    await create_super_admin_account(email, password)
+    # Create an admin account
+    await create_admin_account(email, password, full_name=full_name, role=role)
 
-    admin = await Admin.find_one(Admin.email == email)
-    assert admin is not None
-    assert admin.email == email
-    assert admin.role == "super_admin"
+    # Verify that the admin exists in the database
+    created_admin = await Admin.find_one(Admin.email == email)
+    assert created_admin is not None
+    assert created_admin.email == email
+    assert created_admin.full_name == full_name
+    assert created_admin.role == role
 
 
 @pytest.mark.asyncio
-async def test_create_tester_account(mock_db):
+async def test_create_user_account(mock_db):
     """
-    Test that `create_tester_account()` correctly creates a tester in the test DB.
+    Test creation of a user account.
 
     Expected Outcome:
-    - If no tester exists, one should be created.
+    - A new user account should be added to the database.
     """
     test_db, _, test_user = mock_db
-    email, password = test_user
+    email, password, full_name, role = test_user
 
-    # Ensure the tester does not exist before the test
+    # Ensure no user exists before the test
     assert await User.find_one(User.email == email) is not None
 
-    await create_test_user_account(email, password)
+    # Create a user account
+    await create_user_account(email, password, full_name=full_name, role=role)
 
-    tester = await User.find_one(User.email == email)
-    assert tester is not None
-    assert tester.email == email
-    assert tester.role == "tester"
+    # Verify that the user exists in the database
+    created_user = await User.find_one(User.email == email)
+    assert created_user is not None
+    assert created_user.email == email
+    assert created_user.full_name == full_name
+    assert created_user.role == role
 
 
 @pytest.mark.asyncio
@@ -119,10 +136,10 @@ async def test_authenticate_user_success(mock_db):
     Test user authentication with correct credentials.
 
     Expected Outcome:
-    - The function should return True for valid credentials.
+    - Authentication should succeed with correct password.
     """
     _, _, test_user = mock_db
-    email, password = test_user
+    email, password, _, _ = test_user
 
     assert await authenticate_user(email, password) is True
 
@@ -133,12 +150,12 @@ async def test_authenticate_user_fail(mock_db):
     Test user authentication failure due to incorrect password.
 
     Expected Outcome:
-    - The function should return False when the password is incorrect.
+    - Authentication should fail with incorrect password.
     """
     _, _, test_user = mock_db
-    email, _ = test_user  # Use the correct email, but incorrect password
+    email, _, _, _ = test_user
 
-    assert await authenticate_user(email, "WrongPassword123!") is False
+    assert await authenticate_user(email, "WrongPass123!") is False
 
 
 @pytest.mark.asyncio
@@ -147,10 +164,10 @@ async def test_authenticate_admin_success(mock_db):
     Test admin authentication with correct credentials.
 
     Expected Outcome:
-    - The function should return True for valid credentials.
+    - Authentication should succeed with correct password.
     """
     _, test_admin, _ = mock_db
-    email, password = test_admin
+    email, password, _, _ = test_admin
 
     assert await authenticate_admin(email, password) is True
 
@@ -161,12 +178,12 @@ async def test_authenticate_admin_fail(mock_db):
     Test admin authentication failure due to incorrect password.
 
     Expected Outcome:
-    - The function should return False when the password is incorrect.
+    - Authentication should fail with incorrect password.
     """
     _, test_admin, _ = mock_db
-    email, _ = test_admin  # Use the correct email, but incorrect password
+    email, _, _, _ = test_admin
 
-    assert await authenticate_admin(email, "WrongAdminPassword!") is False
+    assert await authenticate_admin(email, "WrongPass123!") is False
 
 
 @pytest.mark.asyncio
@@ -178,7 +195,7 @@ async def test_username_exists_found(mock_db):
     - The function should return the user object when the username exists.
     """
     _, _, test_user = mock_db
-    email, _ = test_user
+    email, _, _, _ = test_user
 
     found_user = await username_exists(email)
     assert found_user is not None
@@ -203,10 +220,10 @@ async def test_admin_username_exists_found(mock_db):
     Test `admin_username_exists()` when the admin exists.
 
     Expected Outcome:
-    - The function should return the admin object when the username exists.
+    - The function should return the admin object when the admin exists.
     """
     _, test_admin, _ = mock_db
-    email, _ = test_admin
+    email, _, _, _ = test_admin
 
     found_admin = await admin_username_exists(email)
     assert found_admin is not None
@@ -221,5 +238,5 @@ async def test_admin_username_exists_not_found(mock_db):
     Expected Outcome:
     - The function should return None when the admin is not found.
     """
-    found_admin = await admin_username_exists("nonexistent@example.com")
+    found_admin = await admin_username_exists("nonexistent_admin@example.com")
     assert found_admin is None

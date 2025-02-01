@@ -4,37 +4,45 @@ test_user.py
 Unit tests for the User model in the JANUX Authentication Gateway.
 
 Tests:
-- User model initialization.
-- Full name and password validation.
-- Database insert and retrieval operations.
-- Enforcing unique email constraints.
+- User model validation (email, full name, hashed password, role).
+- User creation via Beanie.
+- Database operations for user insertion and retrieval.
 
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
 import pytest
 import uuid
+from datetime import datetime, timezone
 from motor.motor_asyncio import AsyncIOMotorClient
-from pydantic import ValidationError
 from beanie import init_beanie
+from janux_auth_gateway.models.admin import Admin
 from janux_auth_gateway.models.user import User
 from janux_auth_gateway.models.roles import UserRole
-from janux_auth_gateway.auth.passwords import hash_password
+from janux_auth_gateway.database.mongoDB import create_user_account
 
 
 @pytest.fixture(scope="function")
-async def mock_db():
+async def mock_db(mocker):
     """
-    Provides a fully isolated MongoDB for testing.
-    Ensures Beanie is initialized properly.
+    Provides an isolated MongoDB test database.
+    Uses a real MongoDB instance instead of mongomock.
     Cleans up test data after each test.
     """
-    db_name = f"test_db_{uuid.uuid4().hex}"  # Unique test database for each run
-    client = AsyncIOMotorClient("mongodb://localhost:27017")  # Local MongoDB
+    db_name = f"test_db_{uuid.uuid4().hex}"  # Unique test database for each test
+    client = AsyncIOMotorClient("mongodb://localhost:27017")  # Use real MongoDB
     test_db = client[db_name]
 
+    # Patch `AsyncIOMotorClient` so `init_db()` uses the test database
+    mocker.patch(
+        "janux_auth_gateway.database.mongoDB.AsyncIOMotorClient", return_value=client
+    )
+
     # Initialize Beanie models for test database
-    await init_beanie(database=test_db, document_models=[User])
+    await init_beanie(database=test_db, document_models=[User, Admin])
+
+    await test_db["Admin"].create_index([("email", 1)], unique=True)
+    await test_db["User"].create_index([("email", 1)], unique=True)
 
     yield test_db  # Provide test DB to tests
 
@@ -43,87 +51,111 @@ async def mock_db():
 
 
 @pytest.mark.asyncio
-async def test_user_model_initialization(mock_db):
+async def test_user_model_success(mock_db):
     """
-    Test the initialization of the User model with valid data.
+    Test that a valid User model is created successfully.
 
     Expected Outcome:
-    - A User instance should be created successfully.
+    - The model should be instantiated without errors.
     """
     user = User(
-        email="jane.doe@example.com",
-        full_name="Jane Doe",
+        email="test.user@example.com",
+        full_name="Test User",
         hashed_password="hashed_password_123",
         role=UserRole.USER,
+        created_at=datetime(2025, 1, 23, 12, 0, 0, tzinfo=timezone.utc),
     )
 
-    assert user.email == "jane.doe@example.com"
-    assert user.full_name == "Jane Doe"
+    assert user.email == "test.user@example.com"
+    assert user.full_name == "Test User"
     assert user.hashed_password == "hashed_password_123"
     assert user.role == UserRole.USER
-    assert user.created_at is not None
-
-
-def test_user_full_name_validation():
-    """
-    Test validation of the full name field.
-
-    Expected Outcome:
-    - A `ValidationError` should be raised if the full name is empty or too short.
-    """
-    with pytest.raises(
-        ValidationError, match="String should have at least 3 characters"
-    ):
-        User(
-            email="jane.doe@example.com",
-            full_name="",
-            hashed_password="hashed_password_123",
-        )
-
-    with pytest.raises(
-        ValidationError, match="String should have at least 3 characters"
-    ):
-        User(
-            email="jane.doe@example.com",
-            full_name="A",
-            hashed_password="hashed_password_123",
-        )
-
-
-def test_user_password_validation():
-    """
-    Test validation of the hashed password field.
-
-    Expected Outcome:
-    - A `ValidationError` should be raised if the password is too short.
-    """
-    with pytest.raises(
-        ValidationError, match="String should have at least 8 characters"
-    ):
-        User(
-            email="jane.doe@example.com", full_name="Jane Doe", hashed_password="short"
-        )
+    assert user.created_at == datetime(2025, 1, 23, 12, 0, 0, tzinfo=timezone.utc)
 
 
 @pytest.mark.asyncio
-async def test_user_database_insert_and_retrieve(mock_db):
+async def test_user_creation_via_db_function(mock_db):
     """
-    Test inserting and retrieving a User document from MongoDB.
+    Test creating a user via the `create_user_account` function.
 
     Expected Outcome:
-    - The inserted user should be retrievable from the database.
+    - The function should create a user in the database.
     """
-    user = User(
-        email="jane.doe@example.com",
-        full_name="Jane Doe",
-        hashed_password=hash_password("securepassword"),
+    email = "test.user@example.com"
+    password = "TestUserPassword123!"
+    full_name = "Test Userovski"
+    role = "user"  # Must be one of the allowed values in UserRole
+
+    await create_user_account(
+        email=email, password=password, full_name=full_name, role=role
+    )
+
+    saved_user = await User.find_one(User.email == email)
+
+    assert saved_user is not None
+    assert saved_user.email == email
+    assert saved_user.full_name == full_name
+    assert saved_user.role == role  # Ensure correct role is saved
+
+
+@pytest.mark.asyncio
+async def test_user_model_invalid_full_name(mock_db):
+    """
+    Test that an empty or too short full name raises a validation error.
+
+    Expected Outcome:
+    - Pydantic validation should raise a ValueError.
+    """
+    with pytest.raises(ValueError, match="should have at least 3 characters"):
+
+        await User(
+            email="test.user@example.com",
+            full_name="A",
+            hashed_password="hashed_password_123",
+            role=UserRole.USER,
+        ).insert()
+
+
+@pytest.mark.asyncio
+async def test_user_model_invalid_password(mock_db):
+    """
+    Test that a password shorter than 8 characters raises a validation error.
+
+    Expected Outcome:
+    - Pydantic validation should raise a ValueError.
+    """
+    with pytest.raises(ValueError, match="should have at least 8 characters"):
+        await User(
+            email="test.user@example.com",
+            full_name="Test User",
+            hashed_password="short",
+            role=UserRole.USER,
+        ).insert()
+
+
+@pytest.mark.asyncio
+async def test_user_unique_email_constraint(mock_db):
+    """
+    Test enforcing the unique email constraint.
+
+    Expected Outcome:
+    - The second insert should fail due to the unique constraint.
+    """
+    email = "unique.user@example.com"
+    full_name = "Unique User"
+    password = "SecurePassword123!"
+
+    user1 = User(
+        email=email, full_name=full_name, hashed_password=password, role=UserRole.USER
+    )
+    await user1.insert()
+
+    user2 = User(
+        email=email,
+        full_name="Another User",
+        hashed_password=password,
         role=UserRole.USER,
     )
 
-    await user.insert()
-    retrieved_user = await User.find_one(User.email == "jane.doe@example.com")
-
-    assert retrieved_user is not None
-    assert retrieved_user.email == "jane.doe@example.com"
-    assert retrieved_user.full_name == "Jane Doe"
-    assert retrieved_user.role == UserRole.USER
+    with pytest.raises(Exception):  # Beanie should enforce uniqueness
+        await user2.insert()

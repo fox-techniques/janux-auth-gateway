@@ -59,6 +59,9 @@ async def init_db(
         await init_beanie(database=db, document_models=[User, Admin])
         await db.command("ping")  # Ensure database is created
 
+        await db["Admin"].create_index([("email", 1)], unique=True)
+        await db["User"].create_index([("email", 1)], unique=True)
+
         logger.info(
             f"Connected to MongoDB and initialized Beanie successfully. Using database: {db.name}"
         )
@@ -101,8 +104,8 @@ async def init_db(
 async def create_admin_account(
     email: str,
     password: str,
-    role: str = "super_admin",
     full_name: str = "Super Adminovski",
+    role: str = "super_admin",
 ) -> None:
     """
     Creates an admin account in the database.
@@ -110,8 +113,8 @@ async def create_admin_account(
     Args:
         email (str): Admin's email.
         password (str): Admin's password.
-        role (str): Admin's role (default: "super_admin").
         full_name (str): Admin's full name (default: "Super Adminovski").
+        role (str): Admin's role (default: "super_admin").
     """
     if not email or not password:
         logger.error("Super admin email or password is missing.")
@@ -132,7 +135,10 @@ async def create_admin_account(
 
 
 async def create_user_account(
-    email: str, password: str, role: str = "user", full_name: str = "Test Userovski"
+    email: str,
+    password: str,
+    full_name: str = "Test Userovski",
+    role: str = "user",
 ) -> None:
     """
     Creates an user account in the database.
@@ -140,8 +146,8 @@ async def create_user_account(
     Args:
         email (str): Test user's email.
         password (str): Test user's password.
-        role (str): Test user's role (default: "user").
         full_name (str): Test user's full name (default: "Test Userovski").
+        role (str): Test user's role (default: "user").
     """
     if not email or not password:
         logger.error("Test user email or password is missing.")

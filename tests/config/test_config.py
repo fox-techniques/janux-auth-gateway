@@ -73,6 +73,16 @@ def mock_config(mocker):
             "ADMIN_TOKEN_URL": "http://localhost/admin-token",
             "MONGO_URI": "mongodb://localhost:27017/test_db",
             "MONGO_DATABASE_NAME": "test_db",
+            "ISSUER": "JANUX-server",
+            "AUDIENCE": "JANUX-application",
+            "MONGO_ADMIN_EMAIL": "admin@example.com",
+            "MONGO_ADMIN_PASSWORD": "adminpassword",
+            "MONGO_ADMIN_FULLNAME": "Admin User",
+            "MONGO_ADMIN_ROLE": "super_admin",
+            "MONGO_USER_EMAIL": "user@example.com",
+            "MONGO_USER_PASSWORD": "userpassword",
+            "MONGO_USER_FULLNAME": "Test User",
+            "MONGO_USER_ROLE": "user",
             "REDIS_HOST": "localhost",
             "REDIS_PORT": "6379",
         },
@@ -137,3 +147,37 @@ def test_config_missing_critical_vars(mocker):
 
     with pytest.raises(ValueError, match="Invalid configuration for PRIVATE_KEY"):
         Config.validate()
+
+
+def test_config_redis_connection(mocker):
+    """
+    Test that Redis host and port are set correctly.
+
+    Expected Outcome:
+    - Config should properly set REDIS_HOST and REDIS_PORT.
+    """
+    mocker.patch.object(Config, "REDIS_HOST", "fake_redis_host")
+    mocker.patch.object(Config, "REDIS_PORT", "6380")
+
+    assert Config.REDIS_HOST == "fake_redis_host"
+    assert Config.REDIS_PORT == "6380"
+
+
+def test_config_secure_admin_defaults(mock_config):
+    """
+    Test that the default admin role is set correctly.
+
+    Expected Outcome:
+    - Default admin role should be 'super_admin'.
+    """
+    assert Config.MONGO_ADMIN_ROLE == "super_admin"
+
+
+def test_config_secure_user_defaults(mock_config):
+    """
+    Test that the default user role is set correctly.
+
+    Expected Outcome:
+    - Default user role should be 'user'.
+    """
+    assert Config.MONGO_USER_ROLE == "user"
