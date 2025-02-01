@@ -24,11 +24,14 @@ from typing import Annotated
 import redis
 
 from janux_auth_gateway.config import Config
-from janux_auth_gateway.schemas.user import UserCreate, UserResponse
-from janux_auth_gateway.schemas.response import ConflictResponse, UnauthorizedResponse
+from janux_auth_gateway.schemas.user_schema import UserCreate, UserResponse
+from janux_auth_gateway.schemas.response_schema import (
+    ConflictResponse,
+    UnauthorizedResponse,
+)
 from janux_auth_gateway.auth.passwords import hash_password
 from janux_auth_gateway.auth.jwt import get_current_user
-from janux_auth_gateway.models.user import User
+from janux_auth_gateway.models.user_model import User
 from janux_auth_gateway.debug.custom_logger import get_logger
 
 # Initialize logger

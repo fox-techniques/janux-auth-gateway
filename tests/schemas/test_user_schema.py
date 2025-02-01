@@ -5,6 +5,7 @@ Unit tests for the user schemas in the JANUX Authentication Gateway.
 
 Tests:
 - Validation of UserBase, UserCreate, UserResponse, and UserLogin schemas.
+- Ensuring required fields and validation rules.
 - Ensuring example values match expected outputs.
 
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
@@ -12,7 +13,7 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 
 import pytest
 from pydantic import ValidationError
-from janux_auth_gateway.schemas.user import (
+from janux_auth_gateway.schemas.user_schema import (
     UserBase,
     UserCreate,
     UserResponse,
@@ -31,6 +32,20 @@ def test_user_base_schema():
 
     assert user.email == "jane.doe@example.com"
     assert user.full_name == "Jane Doe"
+
+
+def test_user_base_missing_fields():
+    """
+    Test that UserBase schema requires `email` and `full_name`.
+
+    Expected Outcome:
+    - Should raise a ValidationError when fields are missing.
+    """
+    with pytest.raises(ValidationError):
+        UserBase(email="jane.doe@example.com")  # Missing `full_name`
+
+    with pytest.raises(ValidationError):
+        UserBase(full_name="Jane Doe")  # Missing `email`
 
 
 def test_user_create_schema():
@@ -56,9 +71,7 @@ def test_user_create_password_validation():
     Expected Outcome:
     - Each invalid password should raise a `ValidationError`.
     """
-    with pytest.raises(
-        ValidationError, match="Password must be at least 8 characters long."
-    ):
+    with pytest.raises(ValidationError, match="type=string_too_short"):
         UserCreate(email="jane.doe@example.com", full_name="Jane Doe", password="short")
 
     with pytest.raises(
@@ -94,6 +107,17 @@ def test_user_response_schema():
     assert user.full_name == "Jane Doe"
 
 
+def test_user_response_missing_id():
+    """
+    Test that UserResponse schema requires `id`.
+
+    Expected Outcome:
+    - Should raise a ValidationError when `id` is missing.
+    """
+    with pytest.raises(ValidationError):
+        UserResponse(email="jane.doe@example.com", full_name="Jane Doe")  # Missing `id`
+
+
 def test_user_login_schema():
     """
     Test the UserLogin schema.
@@ -105,6 +129,20 @@ def test_user_login_schema():
 
     assert user.email == "jane.doe@example.com"
     assert user.password == "Passw0rd123!"
+
+
+def test_user_login_missing_fields():
+    """
+    Test that UserLogin schema requires `email` and `password`.
+
+    Expected Outcome:
+    - Should raise a ValidationError when fields are missing.
+    """
+    with pytest.raises(ValidationError):
+        UserLogin(email="jane.doe@example.com")  # Missing `password`
+
+    with pytest.raises(ValidationError):
+        UserLogin(password="Passw0rd123!")  # Missing `email`
 
 
 def test_user_schema_examples():

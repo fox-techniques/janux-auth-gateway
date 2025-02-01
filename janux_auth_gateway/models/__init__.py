@@ -15,8 +15,8 @@ Features:
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
-from .admin import Admin
-from .user import User
-from .roles import AdminRole, UserRole
+from .admin_model import Admin
+from .user_model import User
+from .roles_model import AdminRole, UserRole
 
 __all__ = ["Admin", "User", "AdminRole", "UserRole"]

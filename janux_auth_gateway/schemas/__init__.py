@@ -15,9 +15,9 @@ Features:
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
-from .token import Token
-from .user import UserBase, UserCreate, UserResponse, UserLogin
-from .response import ConflictResponse, ErrorResponse
+from .token_schema import Token
+from .user_schema import UserBase, UserCreate, UserResponse, UserLogin
+from .response_schema import ConflictResponse, ErrorResponse
 
 __all__ = [
     "Token",

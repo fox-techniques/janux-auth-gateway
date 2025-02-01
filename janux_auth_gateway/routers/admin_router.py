@@ -25,11 +25,11 @@ from typing import Annotated, List
 import redis
 
 from janux_auth_gateway.config import Config
-from janux_auth_gateway.schemas.user import UserResponse
+from janux_auth_gateway.schemas.user_schema import UserResponse
 from janux_auth_gateway.auth.jwt import get_current_admin
-from janux_auth_gateway.models.user import User
+from janux_auth_gateway.models.user_model import User
 from janux_auth_gateway.debug.custom_logger import get_logger
-from janux_auth_gateway.schemas.response import UnauthorizedResponse
+from janux_auth_gateway.schemas.response_schema import UnauthorizedResponse
 
 # Initialize logger
 logger = get_logger("auth_service_logger")

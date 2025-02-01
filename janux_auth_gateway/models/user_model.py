@@ -16,7 +16,7 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 from beanie import Document
 from pydantic import EmailStr, Field, field_validator, ConfigDict
 from datetime import datetime, timezone
-from .roles import UserRole
+from .roles_model import UserRole
 
 
 class User(Document):

@@ -24,7 +24,7 @@ import redis
 from janux_auth_gateway.auth.jwt import create_access_token
 from janux_auth_gateway.database.mongoDB import authenticate_user, authenticate_admin
 from janux_auth_gateway.config import Config
-from janux_auth_gateway.schemas.token import Token
+from janux_auth_gateway.schemas.token_schema import Token
 from janux_auth_gateway.debug.custom_logger import get_logger
 
 # Initialize logger
