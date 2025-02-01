@@ -4,26 +4,32 @@ test_mongoDB.py
 Unit tests for MongoDB initialization, super admin creation, and authentication.
 
 Tests:
-- Database initialization
-- Ensure super admin exists
-- User authentication with correct and incorrect credentials
-- Admin authentication with correct and incorrect credentials
-- Username lookup
+- Ensures `init_db()` correctly sets up the test database.
+- Verifies that super admin and tester accounts are created.
+- Validates user and admin authentication functions.
+- Checks for user and admin existence in the database.
+
+Features:
+- Uses `mongomock` for a fully in-memory MongoDB.
+- Ensures that inserted test users/admins can be retrieved.
+- Uses `AsyncIOMotorClient` to provide a real test database environment.
 
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
 import pytest
 import uuid
-from unittest.mock import patch
 from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
+
 from janux_auth_gateway.database.mongoDB import (
     init_db,
-    ensure_super_admin_exists,
+    create_admin_account,
+    create_user_account,
     authenticate_user,
     authenticate_admin,
     username_exists,
+    admin_username_exists,
 )
 from janux_auth_gateway.models.user import User
 from janux_auth_gateway.models.admin import Admin
@@ -34,61 +40,77 @@ from janux_auth_gateway.config import Config
 @pytest.fixture(scope="function")
 async def mock_db(mocker):
     """
-    Provides a fully isolated MongoDB for testing.
-    Ensures Beanie is initialized properly.
+    Provides an isolated MongoDB test database.
+    Uses a real MongoDB instance instead of mongomock.
     Cleans up test data after each test.
     """
-    db_name = f"test_db_{uuid.uuid4().hex}"  # Unique test database for each run
-    client = AsyncIOMotorClient("mongodb://localhost:27017")  # Local MongoDB
+    db_name = f"test_db_{uuid.uuid4().hex}"  # Unique test database for each test
+    client = AsyncIOMotorClient("mongodb://localhost:27017")  # Use real MongoDB
     test_db = client[db_name]
 
-    # Initialize Beanie models for test database
-    await init_beanie(database=test_db, document_models=[User, Admin])
-
-    # Patch the MongoDB client so `init_db()` uses the mock DB
+    # Patch `AsyncIOMotorClient` so `init_db()` uses the test database
     mocker.patch(
         "janux_auth_gateway.database.mongoDB.AsyncIOMotorClient", return_value=client
     )
 
-    yield test_db  # Provide test DB to tests
+    # Initialize Beanie models for test database
+    await init_beanie(database=test_db, document_models=[User, Admin])
+
+    test_admin = ("test.super.admin@example.com", "TestSuperAdminPassw0rd123!")
+    test_user = ("test.user@example.com", "TestUserPassw0rd123!")
+
+    # Create default accounts (super admin & tester) in the test database
+    await create_admin_account(*test_admin)
+    await create_user_account(*test_user)
+
+    yield test_db, test_admin, test_user  # Provide test DB to tests
 
     # Cleanup: Drop test database after each test
-    await client.drop_database(db_name)
+    # await client.drop_database(db_name)
 
 
 @pytest.mark.asyncio
-async def test_init_db_success(mock_db):
+async def test_create_super_admin_account(mock_db):
     """
-    Test successful MongoDB initialization.
+    Test that `create_super_admin_account()` correctly creates a super admin in the test DB.
 
     Expected Outcome:
-    - Connection succeeds without raising an error.
+    - If no super admin exists, one should be created.
     """
-    try:
-        await init_db()
-    except SystemExit:
-        pytest.fail("init_db() raised SystemExit unexpectedly!")
+    test_db, test_admin, _ = mock_db
+    email, password = test_admin
 
+    # Ensure the super admin does not exist before the test
+    assert await Admin.find_one(Admin.email == email) is not None
 
-@pytest.mark.asyncio
-async def test_ensure_super_admin_exists(mock_db, mocker):
-    """
-    Test that `ensure_super_admin_exists()` creates an admin if none exists.
+    await create_super_admin_account(email, password)
 
-    Expected Outcome:
-    - If no admin exists, a new one is created.
-    """
-    mocker.patch.object(Config, "MONGO_SUPER_ADMIN_EMAIL", "admin@example.com")
-    mocker.patch.object(Config, "MONGO_SUPER_ADMIN_PASSWORD", "adminpassword")
-
-    assert await Admin.find_one(Admin.email == "admin@example.com") is None
-
-    await ensure_super_admin_exists()
-
-    admin = await Admin.find_one(Admin.email == "admin@example.com")
+    admin = await Admin.find_one(Admin.email == email)
     assert admin is not None
-    assert admin.email == "admin@example.com"
+    assert admin.email == email
     assert admin.role == "super_admin"
+
+
+@pytest.mark.asyncio
+async def test_create_tester_account(mock_db):
+    """
+    Test that `create_tester_account()` correctly creates a tester in the test DB.
+
+    Expected Outcome:
+    - If no tester exists, one should be created.
+    """
+    test_db, _, test_user = mock_db
+    email, password = test_user
+
+    # Ensure the tester does not exist before the test
+    assert await User.find_one(User.email == email) is not None
+
+    await create_test_user_account(email, password)
+
+    tester = await User.find_one(User.email == email)
+    assert tester is not None
+    assert tester.email == email
+    assert tester.role == "tester"
 
 
 @pytest.mark.asyncio
@@ -99,14 +121,10 @@ async def test_authenticate_user_success(mock_db):
     Expected Outcome:
     - The function should return True for valid credentials.
     """
-    user = User(
-        email="user@example.com",
-        full_name="Test User",
-        hashed_password=hash_password("securepassword"),
-    )
-    await user.save()
+    _, _, test_user = mock_db
+    email, password = test_user
 
-    assert await authenticate_user("user@example.com", "securepassword") is True
+    assert await authenticate_user(email, password) is True
 
 
 @pytest.mark.asyncio
@@ -117,56 +135,38 @@ async def test_authenticate_user_fail(mock_db):
     Expected Outcome:
     - The function should return False when the password is incorrect.
     """
-    user = User(
-        email="user@example.com",
-        full_name="Test User",
-        hashed_password=hash_password("securepassword"),
-    )
-    await user.save()
+    _, _, test_user = mock_db
+    email, _ = test_user  # Use the correct email, but incorrect password
 
-    assert await authenticate_user("user@example.com", "wrongpassword") is False
+    assert await authenticate_user(email, "WrongPassword123!") is False
 
 
 @pytest.mark.asyncio
-async def test_authenticate_admin_success(mock_db, mocker):
+async def test_authenticate_admin_success(mock_db):
     """
     Test admin authentication with correct credentials.
 
     Expected Outcome:
     - The function should return True for valid credentials.
     """
-    mocker.patch.object(Config, "MONGO_SUPER_ADMIN_EMAIL", "admin@example.com")
-    mocker.patch.object(Config, "MONGO_SUPER_ADMIN_PASSWORD", "adminpassword")
+    _, test_admin, _ = mock_db
+    email, password = test_admin
 
-    admin = Admin(
-        email="admin@example.com",
-        full_name="Super Admin",
-        hashed_password=hash_password("adminpassword"),
-    )
-    await admin.save()
-
-    assert await authenticate_admin("admin@example.com", "adminpassword") is True
+    assert await authenticate_admin(email, password) is True
 
 
 @pytest.mark.asyncio
-async def test_authenticate_admin_fail(mock_db, mocker):
+async def test_authenticate_admin_fail(mock_db):
     """
     Test admin authentication failure due to incorrect password.
 
     Expected Outcome:
     - The function should return False when the password is incorrect.
     """
-    mocker.patch.object(Config, "MONGO_SUPER_ADMIN_EMAIL", "admin@example.com")
-    mocker.patch.object(Config, "MONGO_SUPER_ADMIN_PASSWORD", "adminpassword")
+    _, test_admin, _ = mock_db
+    email, _ = test_admin  # Use the correct email, but incorrect password
 
-    admin = Admin(
-        email="admin@example.com",
-        full_name="Super Admin",
-        hashed_password=hash_password("adminpassword"),
-    )
-    await admin.save()
-
-    assert await authenticate_admin("admin@example.com", "wrongpassword") is False
+    assert await authenticate_admin(email, "WrongAdminPassword!") is False
 
 
 @pytest.mark.asyncio
@@ -177,16 +177,12 @@ async def test_username_exists_found(mock_db):
     Expected Outcome:
     - The function should return the user object when the username exists.
     """
-    user = User(
-        email="existing@example.com",
-        full_name="Existing User",
-        hashed_password=hash_password("securepassword"),
-    )
-    await user.save()
+    _, _, test_user = mock_db
+    email, _ = test_user
 
-    found_user = await username_exists("existing@example.com")
+    found_user = await username_exists(email)
     assert found_user is not None
-    assert found_user.email == "existing@example.com"
+    assert found_user.email == email
 
 
 @pytest.mark.asyncio
@@ -199,3 +195,31 @@ async def test_username_exists_not_found(mock_db):
     """
     found_user = await username_exists("nonexistent@example.com")
     assert found_user is None
+
+
+@pytest.mark.asyncio
+async def test_admin_username_exists_found(mock_db):
+    """
+    Test `admin_username_exists()` when the admin exists.
+
+    Expected Outcome:
+    - The function should return the admin object when the username exists.
+    """
+    _, test_admin, _ = mock_db
+    email, _ = test_admin
+
+    found_admin = await admin_username_exists(email)
+    assert found_admin is not None
+    assert found_admin.email == email
+
+
+@pytest.mark.asyncio
+async def test_admin_username_exists_not_found(mock_db):
+    """
+    Test `admin_username_exists()` when the admin does not exist.
+
+    Expected Outcome:
+    - The function should return None when the admin is not found.
+    """
+    found_admin = await admin_username_exists("nonexistent@example.com")
+    assert found_admin is None

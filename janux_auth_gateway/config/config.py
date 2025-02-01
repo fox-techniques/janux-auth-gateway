@@ -85,6 +85,10 @@ class Config:
         get_env_variable("ACCESS_TOKEN_EXPIRE_MINUTES", "20")
     )
 
+    # Token issuer and audience
+    ISSUER = get_env_variable("ISSUER", "JANUX-server")
+    AUDIENCE = get_env_variable("AUDIENCE", "JANUX-application")
+
     # Token URL
     USER_TOKEN_URL = get_env_variable("USER_TOKEN_URL")
     ADMIN_TOKEN_URL = get_env_variable("ADMIN_TOKEN_URL")
@@ -92,10 +96,17 @@ class Config:
     # MongoDB connection URI
     MONGO_URI = get_env_variable("MONGO_URI")
     MONGO_DATABASE_NAME = get_env_variable("MONGO_DATABASE_NAME")
-    MONGO_SUPER_ADMIN_EMAIL = get_env_variable("MONGO_SUPER_ADMIN_EMAIL")
-    MONGO_SUPER_ADMIN_PASSWORD = get_env_variable("MONGO_SUPER_ADMIN_PASSWORD")
-    MONGO_TESTER_EMAIL = get_env_variable("MONGO_TESTER_EMAIL")
-    MONGO_TESTER_PASSWORD = get_env_variable("MONGO_TESTER_PASSWORD")
+
+    # MongoDB initial admin and user credentials
+    MONGO_ADMIN_EMAIL = get_env_variable("MONGO_INIT_ADMIN_EMAIL")
+    MONGO_ADMIN_PASSWORD = get_env_variable("MONGO_INIT_ADMIN_PASSWORD")
+    MONGO_ADMIN_FULLNAME = get_env_variable("MONGO_INIT_ADMIN_FULLNAME")
+    MONGO_ADMIN_ROLE = get_env_variable("MONGO_INIT_ADMIN_ROLE", "super_admin")
+
+    MONGO_USER_EMAIL = get_env_variable("MONGO_INIT_USER_EMAIL")
+    MONGO_USER_PASSWORD = get_env_variable("MONGO_INIT_USER_PASSWORD")
+    MONGO_USER_FULLNAME = get_env_variable("MONGO_INIT_USER_FULLNAME")
+    MONGO_USER_ROLE = get_env_variable("MONGO_INIT_USER_ROLE", "user")
 
     # REDIS configuration
     REDIS_HOST = get_env_variable("REDIS_HOST", "localhost")

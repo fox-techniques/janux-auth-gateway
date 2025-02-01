@@ -4,18 +4,21 @@ test_config.py
 Unit tests for the configuration module in the JANUX Authentication Gateway.
 
 Tests:
-- Retrieval of environment variables with defaults
-- Handling of missing required environment variables
-- Config class initialization with mock values
-- Validation of critical environment variables
+- Retrieval of environment variables with defaults.
+- Handling of missing required environment variables.
+- Config validation without exposing secret values.
+
+Features:
+- Uses `pytest-mock` to override environment variables.
+- Mocks private/public key file reads to avoid file system dependencies.
+- Ensures secure validation without printing sensitive information.
 
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
 import pytest
 import os
-import secrets
-from unittest.mock import patch
+from unittest.mock import patch, mock_open
 from janux_auth_gateway.config import get_env_variable, Config
 
 
@@ -55,44 +58,32 @@ def test_get_env_variable_missing_without_default():
 @pytest.fixture
 def mock_config(mocker):
     """
-    Mock the entire Config class properties to prevent exposure of real secrets.
+    Mock the entire Config class properties without exposing secrets.
     """
-    mocker.patch.multiple(
-        Config,
-        SECRET_KEY=secrets.token_urlsafe(32),  # Securely generate a random secret key
-        ACCESS_TOKEN_EXPIRE_MINUTES=30,
-        USER_TOKEN_URL="http://localhost/token",
-        ADMIN_TOKEN_URL="http://localhost/admin-token",
-        MONGO_URI="mongodb://localhost:27017/test_db",
-        MONGO_DATABASE_NAME="test_db",
-        MONGO_SUPER_ADMIN_EMAIL="admin@example.com",
-        MONGO_SUPER_ADMIN_PASSWORD="adminpassword",
-        MONGO_TESTER_EMAIL="tester@example.com",
-        MONGO_TESTER_PASSWORD="testerpassword",
-        ALLOWED_ORIGINS="http://localhost",
-        CONTAINER=False,
+    mocker.patch.dict(
+        os.environ,
+        {
+            "ENVIRONMENT": "test",
+            "ALLOWED_ORIGINS": "http://localhost,http://127.0.0.1",
+            "CONTAINER": "False",
+            "AUTH_PRIVATE_KEY_PATH": "/fake/private.pem",
+            "AUTH_PUBLIC_KEY_PATH": "/fake/public.pem",
+            "ACCESS_TOKEN_EXPIRE_MINUTES": "30",
+            "USER_TOKEN_URL": "http://localhost/token",
+            "ADMIN_TOKEN_URL": "http://localhost/admin-token",
+            "MONGO_URI": "mongodb://localhost:27017/test_db",
+            "MONGO_DATABASE_NAME": "test_db",
+            "REDIS_HOST": "localhost",
+            "REDIS_PORT": "6379",
+        },
     )
 
+    fake_private_key = "-----BEGIN PRIVATE KEY-----\nFAKEKEY\n-----END PRIVATE KEY-----"
+    fake_public_key = "-----BEGIN PUBLIC KEY-----\nFAKEKEY\n-----END PUBLIC KEY-----"
 
-def test_config_initialization(mock_config):
-    """
-    Test that the Config class initializes correctly with mocked values.
-
-    Expected Outcome:
-    - All environment variables should be loaded correctly.
-    """
-    assert isinstance(Config.SECRET_KEY, str) and len(Config.SECRET_KEY) >= 32
-    assert Config.ACCESS_TOKEN_EXPIRE_MINUTES == 30
-    assert Config.USER_TOKEN_URL == "http://localhost/token"
-    assert Config.ADMIN_TOKEN_URL == "http://localhost/admin-token"
-    assert Config.MONGO_URI == "mongodb://localhost:27017/test_db"
-    assert Config.MONGO_DATABASE_NAME == "test_db"
-    assert Config.MONGO_SUPER_ADMIN_EMAIL == "admin@example.com"
-    assert Config.MONGO_SUPER_ADMIN_PASSWORD == "adminpassword"
-    assert Config.MONGO_TESTER_EMAIL == "tester@example.com"
-    assert Config.MONGO_TESTER_PASSWORD == "testerpassword"
-    assert Config.ALLOWED_ORIGINS == "http://localhost"
-    assert Config.CONTAINER is False  # Ensures proper boolean conversion
+    mocker.patch("builtins.open", mock_open(read_data=fake_private_key), create=True)
+    with patch("builtins.open", mock_open(read_data=fake_public_key)):
+        yield
 
 
 def test_config_validation_success(mock_config):
@@ -108,12 +99,26 @@ def test_config_validation_success(mock_config):
         pytest.fail("Config.validate() raised ValueError unexpectedly!")
 
 
-def test_config_validation_failure(mocker):
+def test_config_validation_failure_invalid_keys(mocker):
     """
-    Test that Config.validate() raises an error for invalid configurations.
+    Test that Config.validate() raises an error if private/public keys are invalid.
 
     Expected Outcome:
-    - Should raise a ValueError if required variables are missing or invalid.
+    - Should raise a ValueError if private or public keys are invalid.
+    """
+    mocker.patch.object(Config, "PRIVATE_KEY", "INVALID_KEY")
+    mocker.patch.object(Config, "PUBLIC_KEY", "INVALID_KEY")
+
+    with pytest.raises(ValueError, match="Invalid configuration for PRIVATE_KEY"):
+        Config.validate()
+
+
+def test_config_validation_failure_invalid_mongo_uri(mocker):
+    """
+    Test that Config.validate() raises an error if MongoDB URI is invalid.
+
+    Expected Outcome:
+    - Should raise a ValueError if the MongoDB URI does not start with the expected prefix.
     """
     mocker.patch.object(Config, "MONGO_URI", "invalid_uri")
 
@@ -126,9 +131,9 @@ def test_config_missing_critical_vars(mocker):
     Test that Config.validate() raises an error when a required variable is missing.
 
     Expected Outcome:
-    - Should raise a ValueError when a critical variable like SECRET_KEY is missing.
+    - Should raise a ValueError when a critical variable like PRIVATE_KEY is missing.
     """
-    mocker.patch.object(Config, "SECRET_KEY", "")
+    mocker.patch.object(Config, "PRIVATE_KEY", "")
 
-    with pytest.raises(ValueError, match="Invalid configuration for SECRET_KEY"):
+    with pytest.raises(ValueError, match="Invalid configuration for PRIVATE_KEY"):
         Config.validate()

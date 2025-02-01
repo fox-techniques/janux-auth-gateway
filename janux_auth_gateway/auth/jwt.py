@@ -30,19 +30,14 @@ from janux_auth_gateway.debug.custom_logger import get_logger
 logger = get_logger("auth_service_logger")
 
 # Constants
-REDIS_HOST = Config.REDIS_HOST
-REDIS_PORT = Config.REDIS_PORT
-
-ACCESS_TOKEN_EXPIRE_MINUTES = Config.ACCESS_TOKEN_EXPIRE_MINUTES
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 # Redis instance for token blacklisting
-blacklist = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
-
+blacklist = redis.Redis(host=Config.REDIS_HOST, port=Config.REDIS_PORT, db=0)
 
 # OAuth2 Bearer configuration
-user_oauth2_bearer = OAuth2PasswordBearer(tokenUrl="/auth/login")
-admin_oauth2_bearer = OAuth2PasswordBearer(tokenUrl="/auth/login")
+user_oauth2_bearer = OAuth2PasswordBearer(tokenUrl=Config.ADMIN_TOKEN_URL)
+admin_oauth2_bearer = OAuth2PasswordBearer(tokenUrl=Config.USER_TOKEN_URL)
 
 
 def _create_jwt(data: Dict[str, Any], expires_delta: timedelta, key: str) -> str:
@@ -63,8 +58,8 @@ def _create_jwt(data: Dict[str, Any], expires_delta: timedelta, key: str) -> str
         {
             "exp": expire,
             "iat": datetime.now(timezone.utc),
-            "iss": "your-auth-server.com",
-            "aud": "your-client-app",
+            "iss": Config.ISSUER,
+            "aud": Config.AUDIENCE,
         }
     )
     return jwt.encode(to_encode, key, algorithm="RS256")
@@ -83,7 +78,7 @@ def create_access_token(
     Returns:
         str: A signed JWT access token.
     """
-    expires = expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expires = expires_delta or timedelta(minutes=Config.ACCESS_TOKEN_EXPIRE_MINUTES)
     return _create_jwt(data, expires, Config.PRIVATE_KEY)
 
 
@@ -127,8 +122,8 @@ def verify_jwt(token: str, redis_client=blacklist) -> Dict[str, Any]:
             token,
             Config.PUBLIC_KEY,
             algorithms=["RS256"],
-            issuer="your-auth-server.com",
-            audience="your-client-app",
+            issuer=Config.ISSUER,
+            audience=Config.AUDIENCE,
         )
     except jwt.ExpiredSignatureError:
         raise HTTPException(

@@ -15,7 +15,6 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 
 from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
-from pymongo.errors import ServerSelectionTimeoutError, OperationFailure
 from typing import Optional
 
 from janux_auth_gateway.auth.passwords import verify_password, hash_password
@@ -28,72 +27,138 @@ from janux_auth_gateway.models.admin import Admin
 logger = get_logger("auth_service_logger")
 
 
-async def init_db(test_db=None) -> None:
+async def init_db(
+    test_db=None, test_db_uri=None, test_db_name=None, test_admin=None, test_user=None
+) -> None:
     """
     Initialize the MongoDB database connection with Beanie.
-    Allows using a test database for unit testing.
+    Allows using a test database, custom URI, and custom database name for unit testing.
 
     Args:
-        test_db (Optional[AsyncIOMotorClient]): A test database instance.
+        test_db (Optional[AsyncIOMotorDatabase]): A test database instance.
+        test_db_uri (Optional[str]): The URI for the test database.
+        test_db_name (Optional[str]): The name of the test database.
+        test_admin (tuple): (email, password) for test admin account.
+        test_user (tuple): (email, password) for test user account.
 
     Raises:
         SystemExit: If the MongoDB server is not reachable or authentication fails.
     """
     try:
-        client = test_db or AsyncIOMotorClient(Config.MONGO_URI)
-        db = client[Config.MONGO_DATABASE_NAME]
+        if test_db is not None:
+            # Use test database and its values
+            client = AsyncIOMotorClient(test_db_uri) if test_db_uri else test_db.client
+            db = client[test_db_name] if test_db_name else test_db
+        else:
+            # Use production database
+            client = AsyncIOMotorClient(Config.MONGO_URI)
+            db = client[Config.MONGO_DATABASE_NAME]
 
-        logger.info("Initializing database connection...")
+        logger.info(f"Initializing database connection to {db.name}...")
+
         await init_beanie(database=db, document_models=[User, Admin])
+        await db.command("ping")  # Ensure database is created
 
-        logger.info("Connected to MongoDB and initialized Beanie successfully.")
+        logger.info(
+            f"Connected to MongoDB and initialized Beanie successfully. Using database: {db.name}"
+        )
 
-    except ServerSelectionTimeoutError:
-        raise SystemExit("MongoDB connection timeout.")
-    except OperationFailure:
-        raise SystemExit("MongoDB authentication failed.")
-    except Exception as general_error:
-        raise SystemExit(f"Unexpected MongoDB error: {general_error}")
+        # Use test credentials if provided, otherwise fall back to Config defaults
+        admin_email, admin_password, admin_fullname, admin_role = test_admin or (
+            Config.MONGO_ADMIN_EMAIL,
+            Config.MONGO_ADMIN_PASSWORD,
+            Config.MONGO_ADMIN_FULLNAME,
+            Config.MONGO_ADMIN_ROLE,
+        )
+        test_user_email, test_user_password, test_user_fullname, test_user_role = (
+            test_user
+            or (
+                Config.MONGO_USER_EMAIL,
+                Config.MONGO_USER_PASSWORD,
+                Config.MONGO_USER_FULLNAME,
+                Config.MONGO_USER_ROLE,
+            )
+        )
+
+        # Ensure test users exist
+        await create_admin_account(
+            email=admin_email,
+            password=admin_password,
+            role=admin_role,
+            full_name=admin_fullname,
+        )
+        await create_user_account(
+            test_user_email,
+            test_user_password,
+            full_name=test_user_fullname,
+            role=test_user_role,
+        )
+
+    except Exception as e:
+        raise SystemExit(f"Unexpected MongoDB error: {e}")
 
 
-async def ensure_super_admin_exists() -> None:
+async def create_admin_account(
+    email: str,
+    password: str,
+    role: str = "super_admin",
+    full_name: str = "Super Adminovski",
+) -> None:
     """
-    Ensures a super admin account exists in the database. Creates one if it doesn't.
-    """
-    admin_email = Config.MONGO_SUPER_ADMIN_EMAIL
-    admin_password = Config.MONGO_SUPER_ADMIN_PASSWORD
+    Creates an admin account in the database.
 
-    if not admin_email or not admin_password:
-        logger.error("Super admin email or password is not configured.")
+    Args:
+        email (str): Admin's email.
+        password (str): Admin's password.
+        role (str): Admin's role (default: "super_admin").
+        full_name (str): Admin's full name (default: "Super Adminovski").
+    """
+    if not email or not password:
+        logger.error("Super admin email or password is missing.")
         return
 
-    if not await Admin.find_one(Admin.email == admin_email):
+    existing_admin = await Admin.find_one(Admin.email == email)
+    if not existing_admin:
         admin = Admin(
-            email=admin_email,
-            full_name="Super Admin",
-            hashed_password=hash_password(admin_password),
-            role="super_admin",
+            email=email,
+            full_name=full_name,
+            hashed_password=hash_password(password),
+            role=role,
         )
         await admin.insert()
-        logger.info(f"Default admin account created: {admin_email}")
+        logger.info(f"Admin account with role '{role}' created: {email}")
+    else:
+        logger.info(f"Admin account {email} already exists.")
 
 
-async def ensure_tester_exists() -> None:
+async def create_user_account(
+    email: str, password: str, role: str = "user", full_name: str = "Test Userovski"
+) -> None:
     """
-    Ensures a tester account exists in the database. Creates one if it doesn't.
-    """
-    tester_email = Config.MONGO_TESTER_EMAIL
-    tester_password = Config.MONGO_TESTER_PASSWORD
+    Creates an user account in the database.
 
-    if not await User.find_one(User.email == tester_email):
+    Args:
+        email (str): Test user's email.
+        password (str): Test user's password.
+        role (str): Test user's role (default: "user").
+        full_name (str): Test user's full name (default: "Test Userovski").
+    """
+    if not email or not password:
+        logger.error("Test user email or password is missing.")
+        return
+
+    existing_tester = await User.find_one(User.email == email)
+    if not existing_tester:
         tester = User(
-            email=tester_email,
-            full_name="Tester",
-            hashed_password=hash_password(tester_password),
-            role="tester",
+            email=email,
+            full_name=full_name,
+            hashed_password=hash_password(password),
+            role=role,
         )
         await tester.insert()
-        logger.info(f"Default tester account created: {tester_email}")
+        logger.info(f"Test user account with role '{role}' created: {email}")
+    else:
+        logger.info(f"Test user account {email} already exists.")
 
 
 async def authenticate_user(username: str, password: str) -> bool:
@@ -107,17 +172,16 @@ async def authenticate_user(username: str, password: str) -> bool:
     Returns:
         bool: True if authentication is successful, False otherwise.
     """
-    logger.info("Authenticating user...")
+    logger.info(f"Authenticating user: {username}")
 
     try:
         user = await username_exists(username)
         if not user:
-            logger.warning("Username does not exist.")
+            logger.warning("User not found.")
             return False
 
-        # Fix: Pass `user.email` as the `user_identifier`
         if not verify_password(password, user.hashed_password, user.email):
-            logger.warning("Password verification failed.")
+            logger.warning("User password verification failed.")
             return False
 
         logger.info("User authenticated successfully.")
@@ -129,7 +193,7 @@ async def authenticate_user(username: str, password: str) -> bool:
 
 async def authenticate_admin(username: str, password: str) -> bool:
     """
-    Authenticate an admin  by verifying their username and password.
+    Authenticate an admin by verifying their username and password.
 
     Args:
         username (str): The admin's email.
@@ -138,15 +202,14 @@ async def authenticate_admin(username: str, password: str) -> bool:
     Returns:
         bool: True if authentication is successful, False otherwise.
     """
-    logger.info("Authenticating admin...")
+    logger.info(f"Authenticating admin: {username}")
 
     try:
         admin = await admin_username_exists(username)
         if not admin:
-            logger.warning("Admin username does not exist.")
+            logger.warning("Admin not found.")
             return False
 
-        # Fix: Pass `user.email` as the `user_identifier`
         if not verify_password(password, admin.hashed_password, admin.email):
             logger.warning("Admin password verification failed.")
             return False
@@ -160,13 +223,27 @@ async def authenticate_admin(username: str, password: str) -> bool:
 
 async def username_exists(username: str) -> Optional[User]:
     """
-    Checks if a username exists in the database.
+    Check if a user exists in the database by email.
+
+    Args:
+        username (str): The user's email.
+
+    Returns:
+        Optional[User]: The user object if found, else None.
     """
+    logger.info(f"Checking if user {username} exists.")
     return await User.find_one(User.email == username)
 
 
 async def admin_username_exists(username: str) -> Optional[Admin]:
     """
-    Checks if an admin's username exists in the database.
+    Check if an admin exists in the database by email.
+
+    Args:
+        username (str): The admin's email.
+
+    Returns:
+        Optional[Admin]: The admin object if found, else None.
     """
+    logger.info(f"Checking if admin {username} exists.")
     return await Admin.find_one(Admin.email == username)

@@ -25,12 +25,8 @@ from janux_auth_gateway.debug.custom_logger import get_logger
 # Initialize logger
 logger = get_logger("auth_service_logger")
 
-# Constants
-REDIS_HOST = Config.REDIS_HOST
-REDIS_PORT = Config.REDIS_PORT
 
-
-redis_instance = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
+redis_instance = redis.Redis(host=Config.REDIS_HOST, port=Config.REDIS_PORT, db=0)
 
 # Configure the password hashing context with Argon2 and bcrypt
 bcrypt_context = CryptContext(schemes=["argon2", "bcrypt"], deprecated="auto")
