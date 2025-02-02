@@ -18,12 +18,14 @@ The JANUX Authentication Gateway is a modular and extensible authentication micr
 
 ## Key Features
 
-- Secure password hashing and verification using bcrypt.
-- JWT-based authentication for users and admins.
-- Modular API routing for user, admin, and authentication endpoints.
-- Centralized logging and error handling for better maintainability.
-- MongoDB integration using Beanie ODM.
-- Health check and root endpoint for monitoring.
+- JWT-based authentication (access & refresh tokens)
+- Role-based access control (RBAC)
+- FastAPI-powered API endpoints
+- MongoDB with Beanie ODM
+- Redis-backed token revocation
+- Password hashing with Argon2 & bcrypt
+- Admin and user management APIs
+- Security-first design
 ---
 
 ## Quick Links

@@ -31,6 +31,7 @@ theme:
 nav:
   - Home: index.md
   - Installation: installation.md
+  - Configuration: configuration.md
   - Support: SUPPORT.md
   - Contributing: CONTRIBUTING.md
   - Code of Conduct: CODE_OF_CONDUCT.md

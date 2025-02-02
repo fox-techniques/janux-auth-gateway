@@ -66,6 +66,13 @@ class Config:
     ALLOWED_ORIGINS: List[str] = get_env_variable("ALLOWED_ORIGINS", "").split(",")
     CONTAINER = get_env_variable("CONTAINER", "False").lower() in ["true", "1"]
 
+    # Encryption configuration
+    ENCRYPTION_KEY = get_env_variable("JANUX_ENCRYPTION_KEY")
+    if len(ENCRYPTION_KEY) != 44:
+        raise ValueError(
+            "JANUX_ENCRYPTION_KEY must be a 32-byte base64-encoded string."
+        )
+
     # JWT configuration
     PRIVATE_KEY_PATH = get_env_variable("AUTH_PRIVATE_KEY_PATH", "private.pem")
     PUBLIC_KEY_PATH = get_env_variable("AUTH_PUBLIC_KEY_PATH", "public.pem")
