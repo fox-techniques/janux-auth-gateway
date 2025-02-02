@@ -1,4 +1,4 @@
-site_name: JANUX Authentiocation Gateway
+site_name: JANUX Authentication Gateway
 theme: 
   features:
     - navigation.footer
@@ -30,8 +30,11 @@ theme:
 
 nav:
   - Home: index.md
-  - Installation: installation.md
+  - Prerequisites: prerequisites.md
   - Configuration: configuration.md
+  - Installation: installation.md
+  - Usage: usage.md
+  - API Reference: api_reference.md
   - Support: SUPPORT.md
   - Contributing: CONTRIBUTING.md
   - Code of Conduct: CODE_OF_CONDUCT.md
@@ -45,7 +48,7 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/fox-techniques/janux-auth-gateway
     - icon: fontawesome/brands/discord
-      link: https://discord.gg/TcCxxSXtaH
+      link: https://discord.gg/pYEW7nxaDq
     - icon: fontawesome/brands/x-twitter
       link: https://x.com/foxtechniques/
     - icon: fontawesome/brands/linkedin
