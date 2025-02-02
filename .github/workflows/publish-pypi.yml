@@ -18,6 +18,7 @@ jobs:
   details:
     name: Extract Tag Details and Pre-checks
     runs-on: ubuntu-latest
+    environment: release-with-approval
     permissions:
       contents: read
     outputs:
@@ -94,6 +95,8 @@ jobs:
     needs: [setup_and_build]
     runs-on: ubuntu-latest
     permissions:
+      contents: read
+      actions: write
       id-token: write
     steps:
       - name: Download Artifacts
@@ -102,25 +105,7 @@ jobs:
           name: dist
           path: dist/
 
-      - name: Mint API Token
-        id: mint-token
-        run: |
-          # Retrieve the OIDC token
-          resp=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=pypi")
-          oidc_token=$(jq -r '.value' <<< "${resp}")
-
-          # Exchange the OIDC token for a PyPI API token
-          resp=$(curl -X POST https://pypi.org/_/oidc/mint-token -d "{\"token\": \"${oidc_token}\"}")
-          api_token=$(jq -r '.token' <<< "${resp}")
-
-          # Mask the API token to prevent leaks
-          echo "::add-mask::${api_token}"
-
-          # Store API token as an output
-          echo "api-token=${api_token}" >> "${GITHUB_OUTPUT}"
-
       - name: Publish Distribution
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          password: ${{ steps.mint-token.outputs.api-token }}
+          password: ${{ secrets.PYPI_TOKEN }}
