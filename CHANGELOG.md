@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- Add pytest configuration and enhance test fixtures; update user model fields for better schema examples for Pydantic v2+ and tox for backwards compatibility ([74373cd](https://github.com/fox-techniques/janux-auth-gateway/commit/74373cd62c02e8a354314728699f006e94a0730f) by A Nova).
 - Add AES encryption settings and key pair generation functionality; update documentation and configuration files ([4b33032](https://github.com/fox-techniques/janux-auth-gateway/commit/4b33032e43d95848c65fae404570354bce07f111) by A Nova).
 - Add Redis configuration and enhance MongoDB initialization; update password security checks and example environment file ([b0d7397](https://github.com/fox-techniques/janux-auth-gateway/commit/b0d73976edc3100758d8e355c264e122e4fd3956) by A Nova).
 - Add CORS configuration and security warnings; implement unit tests for admin and user API routes. Unittesting is finished ([3a6b880](https://github.com/fox-techniques/janux-auth-gateway/commit/3a6b880227b7f80d0e23f856b8684c3496c9bb7f) by A Nova).
