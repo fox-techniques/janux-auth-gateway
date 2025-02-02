@@ -1,6 +1,29 @@
+# Include configuration files
+include pyproject.toml
+include tox.ini
+include .coveragerc
+include pytest.ini
 include README.md
 include LICENSE
-include pyproject.toml
-include setup.py
-recursive-include janux_auth_gateway *
-recursive-include docs *
+include CHANGELOG.md
+
+# Include environment files
+include .env.example
+
+# Include schema and API documentation files
+recursive-include docs *.md
+recursive-include docs *.yml
+recursive-include docs *.yaml
+
+# Include static and template files (if applicable)
+recursive-include janux_auth_gateway/static *
+recursive-include janux_auth_gateway/templates *
+
+# Include tests
+recursive-include tests *.py
+
+# Exclude compiled Python files and caches
+global-exclude __pycache__ *.pyc *.pyo *.pyd *.DS_Store
+
+# Exclude virtual environments & package build directories
+global-exclude .tox .venv build dist *.egg-info
