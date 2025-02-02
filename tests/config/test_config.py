@@ -55,7 +55,7 @@ def test_get_env_variable_missing_without_default():
         get_env_variable("MISSING_VAR")
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_config(mocker):
     """
     Mock the entire Config class properties without exposing secrets.

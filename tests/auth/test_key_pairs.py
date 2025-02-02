@@ -27,7 +27,7 @@ from janux_auth_gateway.auth.key_pairs import (
 )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
 def mock_cipher_key(mocker):
     """
     Fixture to mock the encryption key used in Fernet encryption.

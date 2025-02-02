@@ -24,7 +24,8 @@ from janux_auth_gateway.models.user_model import User
 from janux_auth_gateway.database.mongoDB import create_admin_account
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
+@pytest.mark.asyncio(loop_scope="function")
 async def mock_db(mocker):
     """
     Provides an isolated MongoDB test database.
@@ -52,7 +53,7 @@ async def mock_db(mocker):
     await client.drop_database(db_name)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_admin_model_success(mock_db):
     """
     Test that a valid Admin model is created successfully.
@@ -94,7 +95,7 @@ async def test_admin_invalid_email(mock_db):
         ).insert()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_admin_short_full_name(mock_db):
     """
     Test that a short full name raises a validation error.
@@ -111,7 +112,7 @@ async def test_admin_short_full_name(mock_db):
         ).insert()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_admin_short_password(mock_db):
     """
     Test that a short hashed password raises a validation error.
@@ -128,7 +129,7 @@ async def test_admin_short_password(mock_db):
         ).insert()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_admin_invalid_role(mock_db):
     """
     Test that an invalid role raises a validation error.
@@ -145,7 +146,7 @@ async def test_admin_invalid_role(mock_db):
         ).insert()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_admin_creation_via_db_function(mock_db):
     """
     Test creating an admin via the `create_admin_account` function.
@@ -170,7 +171,7 @@ async def test_admin_creation_via_db_function(mock_db):
     assert saved_admin.role == role
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_admin_str_representation(mock_db):
     """
     Test the string representation of the Admin model.

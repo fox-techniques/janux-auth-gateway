@@ -35,7 +35,7 @@ from janux_auth_gateway.auth.jwt import (
 from janux_auth_gateway.config import Config
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_keys(mocker):
     """
     Mock JWT private and public keys as valid RSA keys.
@@ -61,7 +61,7 @@ def mock_keys(mocker):
     mocker.patch.object(Config, "PUBLIC_KEY", public_pem)
 
 
-@pytest.fixture
+@pytest.fixture()
 def fake_redis():
     """
     Creates an in-memory Redis instance for testing.

@@ -27,7 +27,7 @@ class ConflictResponse(BaseModel):
         detail (str): A detailed error message.
     """
 
-    detail: str = Field(..., example="Email already registered.")
+    detail: str = Field(..., json_schema_extra={"example": "Email already registered."})
 
     model_config = ConfigDict(
         json_schema_extra={"example": {"detail": "Email already registered."}}
@@ -43,8 +43,10 @@ class ErrorResponse(BaseModel):
         code (int): The HTTP status code associated with the error.
     """
 
-    detail: str = Field(..., example="An unexpected error occurred.")
-    code: int = Field(..., example=500)
+    detail: str = Field(
+        ..., json_schema_extra={"example": "An unexpected error occurred."}
+    )
+    code: int = Field(..., json_schema_extra={"example": 500})
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -62,8 +64,8 @@ class UnauthorizedResponse(BaseModel):
         code (int): The HTTP status code for unauthorized errors.
     """
 
-    detail: str = Field(..., example="Invalid credentials.")
-    code: int = Field(..., example=401)
+    detail: str = Field(..., json_schema_extra={"example": "Invalid credentials."})
+    code: int = Field(..., json_schema_extra={"example": 401})
 
     model_config = ConfigDict(
         json_schema_extra={"example": {"detail": "Invalid credentials.", "code": 401}}

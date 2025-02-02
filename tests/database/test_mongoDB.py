@@ -23,7 +23,6 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
 
 from janux_auth_gateway.database.mongoDB import (
-    init_db,
     create_admin_account,
     create_user_account,
     authenticate_user,
@@ -35,7 +34,8 @@ from janux_auth_gateway.models.user_model import User
 from janux_auth_gateway.models.admin_model import Admin
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
+@pytest.mark.asyncio(loop_scope="function")
 async def mock_db(mocker):
     """
     Provides an isolated MongoDB test database.
@@ -80,7 +80,7 @@ async def mock_db(mocker):
     await client.drop_database(db_name)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_create_admin_account(mock_db):
     """
     Test creation of an admin account.
@@ -105,7 +105,7 @@ async def test_create_admin_account(mock_db):
     assert created_admin.role == role
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_create_user_account(mock_db):
     """
     Test creation of a user account.
@@ -130,7 +130,7 @@ async def test_create_user_account(mock_db):
     assert created_user.role == role
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_authenticate_user_success(mock_db):
     """
     Test user authentication with correct credentials.
@@ -144,7 +144,7 @@ async def test_authenticate_user_success(mock_db):
     assert await authenticate_user(email, password) is True
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_authenticate_user_fail(mock_db):
     """
     Test user authentication failure due to incorrect password.
@@ -158,7 +158,7 @@ async def test_authenticate_user_fail(mock_db):
     assert await authenticate_user(email, "WrongPass123!") is False
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_authenticate_admin_success(mock_db):
     """
     Test admin authentication with correct credentials.
@@ -172,7 +172,7 @@ async def test_authenticate_admin_success(mock_db):
     assert await authenticate_admin(email, password) is True
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_authenticate_admin_fail(mock_db):
     """
     Test admin authentication failure due to incorrect password.
@@ -186,7 +186,7 @@ async def test_authenticate_admin_fail(mock_db):
     assert await authenticate_admin(email, "WrongPass123!") is False
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_username_exists_found(mock_db):
     """
     Test `username_exists()` when the user exists.
@@ -202,7 +202,7 @@ async def test_username_exists_found(mock_db):
     assert found_user.email == email
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_username_exists_not_found(mock_db):
     """
     Test `username_exists()` when the user does not exist.
@@ -214,7 +214,7 @@ async def test_username_exists_not_found(mock_db):
     assert found_user is None
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_admin_username_exists_found(mock_db):
     """
     Test `admin_username_exists()` when the admin exists.
@@ -230,7 +230,7 @@ async def test_admin_username_exists_found(mock_db):
     assert found_admin.email == email
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_admin_username_exists_not_found(mock_db):
     """
     Test `admin_username_exists()` when the admin does not exist.

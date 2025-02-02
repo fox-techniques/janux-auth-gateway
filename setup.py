@@ -35,4 +35,9 @@ setup(
     ],
     python_requires=">=3.10",
     include_package_data=True,  # Ensures non-code files in MANIFEST.in are included
+    entry_points={
+        "console_scripts": [
+            "start=janux_auth_gateway.__main__:main",
+        ],
+    },
 )

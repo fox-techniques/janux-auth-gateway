@@ -13,7 +13,7 @@ Features:
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
-from beanie import Document
+from beanie import Document, Indexed
 from pydantic import EmailStr, Field, field_validator, ConfigDict
 from datetime import datetime, timezone
 from .roles_model import AdminRole
@@ -31,11 +31,20 @@ class Admin(Document):
         created_at (datetime): The timestamp of when the admin was created.
     """
 
-    email: EmailStr = Field(..., unique=True, example="admin@example.com")
-    full_name: str = Field(..., min_length=3, max_length=100, example="Admin User")
-    hashed_password: str = Field(..., min_length=8, example="hashed_password_123")
-    role: AdminRole = Field(default=AdminRole.ADMIN, example="admin")
+    email: EmailStr = Field(..., json_schema_extra={"example": "admin@example.com"})
+    full_name: str = Field(
+        ..., min_length=3, max_length=100, json_schema_extra={"example": "Admin User"}
+    )
+    hashed_password: str = Field(
+        ..., min_length=8, json_schema_extra={"example": "hashed_password_123"}
+    )
+    role: AdminRole = Field(
+        default=AdminRole.ADMIN, json_schema_extra={"example": "admin"}
+    )
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    # Add indexing to enforce uniqueness at the database level
+    email: Indexed(EmailStr, unique=True)
 
     @field_validator("full_name")
     @classmethod

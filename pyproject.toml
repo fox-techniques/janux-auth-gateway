@@ -38,6 +38,10 @@ pytest-mock = "^3.14.0"
 mongomock = "^4.3.0"
 mongomock-motor = "^0.0.35"
 fakeredis = "^2.26.2"
+black = "^25.1.0"
+flake8 = "^7.1.1"
+mypy = "^1.14.1"
+autopep8 = "^2.3.2"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "^1.4.0"
@@ -48,7 +52,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-start = "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+start = "janux_auth_gateway.__main__:main"
 
 [tool.pytest.ini_options]
 minversion = "6.0"

@@ -19,7 +19,7 @@ from janux_auth_gateway.main import app
 from janux_auth_gateway.config import Config
 
 
-@pytest.fixture
+@pytest.fixture()
 def client():
     """
     Fixture to set up a test client for FastAPI.

@@ -18,6 +18,7 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
 import pytest
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 from fastapi import FastAPI
 from janux_auth_gateway.routers.auth_router import auth_router
@@ -28,7 +29,7 @@ app.include_router(auth_router, prefix="/auth")
 client = TestClient(app)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_login_endpoint_works():
     """
     Ensure the /auth/login endpoint exists and responds.
@@ -36,9 +37,10 @@ async def test_login_endpoint_works():
     Expected Outcome:
     - Should return 401 Unauthorized (since dependencies are mocked).
     """
-    response = client.post(
-        "/auth/login",
-        data={"username": "test@example.com", "password": "wrongpassword"},
-    )
+    with patch("janux_auth_gateway.auth.passwords.redis.Redis.get", return_value=None):
+        response = client.post(
+            "/auth/login",
+            data={"username": "test@example.com", "password": "wrongpassword"},
+        )
 
     assert response.status_code in [200, 401], f"Unexpected response: {response.json()}"

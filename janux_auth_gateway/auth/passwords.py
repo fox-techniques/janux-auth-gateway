@@ -1,7 +1,7 @@
 """
 passwords.py
 
-Utility module for password hashing and verification using bcrypt and argon2. 
+Utility module for password hashing and verification using bcrypt and argon2.
 This module leverages Passlib's CryptContext to provide secure password management.
 
 Features:

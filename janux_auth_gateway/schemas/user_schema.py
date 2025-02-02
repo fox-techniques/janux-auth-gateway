@@ -28,8 +28,10 @@ class UserBase(BaseModel):
         full_name (str): The full name of the user.
     """
 
-    email: EmailStr = Field(..., example="jane.doe@example.com")
-    full_name: str = Field(..., min_length=3, max_length=100, example="Jane Doe")
+    email: EmailStr = Field(..., json_schema_extra={"example": "jane.doe@example.com"})
+    full_name: str = Field(
+        ..., min_length=3, max_length=100, json_schema_extra={"example": "Jane Doe"}
+    )
 
 
 class UserCreate(UserBase):
@@ -43,7 +45,9 @@ class UserCreate(UserBase):
         password (str): The plain-text password for the user.
     """
 
-    password: str = Field(..., min_length=8, example="Passw0rd123!")
+    password: str = Field(
+        ..., min_length=8, json_schema_extra={"example": "Passw0rd123!"}
+    )
 
     @field_validator("password")
     @classmethod
@@ -84,7 +88,7 @@ class UserResponse(UserBase):
         id (str): The unique identifier for the user.
     """
 
-    id: str = Field(..., example="507f1f77bcf86cd799439011")
+    id: str = Field(..., json_schema_extra={"example": "507f1f77bcf86cd799439011"})
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -106,8 +110,10 @@ class UserLogin(BaseModel):
         password (str): The plain-text password of the user.
     """
 
-    email: EmailStr = Field(..., example="jane.doe@example.com")
-    password: str = Field(..., min_length=8, example="Passw0rd123!")
+    email: EmailStr = Field(..., json_schema_extra={"example": "jane.doe@example.com"})
+    password: str = Field(
+        ..., min_length=8, json_schema_extra={"example": "Passw0rd123!"}
+    )
 
     model_config = ConfigDict(
         json_schema_extra={

@@ -22,7 +22,8 @@ from janux_auth_gateway.models.roles_model import UserRole
 from janux_auth_gateway.database.mongoDB import create_user_account
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture()
+@pytest.mark.asyncio(loop_scope="function")
 async def mock_db(mocker):
     """
     Provides an isolated MongoDB test database.
@@ -50,7 +51,7 @@ async def mock_db(mocker):
     await client.drop_database(db_name)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_user_model_success(mock_db):
     """
     Test that a valid User model is created successfully.
@@ -73,7 +74,7 @@ async def test_user_model_success(mock_db):
     assert user.created_at == datetime(2025, 1, 23, 12, 0, 0, tzinfo=timezone.utc)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_user_creation_via_db_function(mock_db):
     """
     Test creating a user via the `create_user_account` function.
@@ -98,7 +99,7 @@ async def test_user_creation_via_db_function(mock_db):
     assert saved_user.role == role  # Ensure correct role is saved
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_user_model_invalid_full_name(mock_db):
     """
     Test that an empty or too short full name raises a validation error.
@@ -116,7 +117,7 @@ async def test_user_model_invalid_full_name(mock_db):
         ).insert()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_user_model_invalid_password(mock_db):
     """
     Test that a password shorter than 8 characters raises a validation error.
@@ -133,7 +134,7 @@ async def test_user_model_invalid_password(mock_db):
         ).insert()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="function")
 async def test_user_unique_email_constraint(mock_db):
     """
     Test enforcing the unique email constraint.

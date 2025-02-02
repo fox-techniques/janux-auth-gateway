@@ -13,7 +13,7 @@ Features:
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
-from beanie import Document
+from beanie import Document, Indexed
 from pydantic import EmailStr, Field, field_validator, ConfigDict
 from datetime import datetime, timezone
 from .roles_model import UserRole
@@ -31,10 +31,16 @@ class User(Document):
         created_at (datetime): The timestamp of when the user was created.
     """
 
-    email: EmailStr = Field(..., unique=True, example="jane.doe@example.com")
-    full_name: str = Field(..., min_length=3, max_length=100, example="Jane Doe")
-    hashed_password: str = Field(..., min_length=8, example="hashed_password_123")
-    role: UserRole = Field(default=UserRole.USER, example="user")
+    email: EmailStr = Indexed(
+        EmailStr, unique=True
+    )  # Ensure uniqueness in the database
+    full_name: str = Field(
+        ..., min_length=3, max_length=100, json_schema_extra={"example": "Jane Doe"}
+    )
+    hashed_password: str = Field(
+        ..., min_length=8, json_schema_extra={"example": "hashed_password_123"}
+    )
+    role: UserRole = Field(default=UserRole.USER, json_schema_extra={"example": "user"})
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     @field_validator("full_name")

@@ -31,7 +31,7 @@ from janux_auth_gateway.auth.passwords import (
 )
 
 
-@pytest.fixture
+@pytest.fixture()
 def fake_redis():
     """
     Creates an in-memory Redis instance for testing.
@@ -39,7 +39,7 @@ def fake_redis():
     return fakeredis.FakeRedis(decode_responses=True)
 
 
-@pytest.fixture
+@pytest.fixture()
 def mock_password_context(mocker):
     """
     Mocks the Passlib CryptContext to avoid real hashing in tests.
@@ -49,7 +49,7 @@ def mock_password_context(mocker):
     return mock_context
 
 
-@pytest.fixture
+@pytest.fixture()
 def strong_password():
     """
     Returns a strong password that meets security requirements.

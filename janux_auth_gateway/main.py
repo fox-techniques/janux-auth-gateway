@@ -3,7 +3,7 @@ main.py
 
 Entry point for the JANUX Authentication Gateway.
 
-This file initializes the FastAPI app, sets up middleware, exception handlers, 
+This file initializes the FastAPI app, sets up middleware, exception handlers,
 routes, and establishes the MongoDB connection using Beanie.
 
 Features:
@@ -17,6 +17,7 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from janux_auth_gateway.errors.handlers import register_error_handlers
 from janux_auth_gateway.debug.requests import log_requests
 from janux_auth_gateway.debug.middleware import add_request_id
@@ -35,6 +36,7 @@ logger = get_logger("auth_service_logger")
 origins = Config.ALLOWED_ORIGINS
 
 
+@asynccontextmanager
 async def lifespan(app: FastAPI):
     """
     Lifespan context for application startup and shutdown events.
@@ -117,9 +119,15 @@ app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 app.include_router(admin_router, prefix="/admins", tags=["Admins"])
 app.include_router(user_router, prefix="/users", tags=["Users"])
 
+
 # Entry point for running the app directly
-if __name__ == "__main__":
+def main():
+    """Run the Uvicorn server"""
     import uvicorn
 
     logger.info("Running JANUX Authentication Gateway as a standalone application...")
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("janux_auth_gateway.main:app", host="0.0.0.0", port=8000, reload=True)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,7 +1,7 @@
 """
 janux_auth_gateway package
 
-The JANUX Authentication Gateway provides a modular and extensible framework for user and admin authentication, 
+The JANUX Authentication Gateway provides a modular and extensible framework for user and admin authentication,
 JWT management, and database operations using MongoDB and Beanie.
 
 Modules:

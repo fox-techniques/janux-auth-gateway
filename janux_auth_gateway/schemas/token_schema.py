@@ -28,8 +28,10 @@ class Token(BaseModel):
         token_type (str): The type of the token (e.g., "bearer").
     """
 
-    access_token: str = Field(..., example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
-    token_type: str = Field(..., example="bearer")
+    access_token: str = Field(
+        ..., json_schema_extra={"example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}
+    )
+    token_type: str = Field(..., json_schema_extra={"example": "bearer"})
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -51,9 +53,9 @@ class TokenPayload(BaseModel):
         exp (Optional[int]): Expiration time of the token.
     """
 
-    sub: str = Field(..., example="user@example.com")
-    role: str = Field(..., example="user")
-    exp: Optional[int] = Field(None, example=1678901234)
+    sub: str = Field(..., json_schema_extra={"example": "user@example.com"})
+    role: str = Field(..., json_schema_extra={"example": "user"})
+    exp: Optional[int] = Field(None, json_schema_extra={"example": 1678901234})
 
     model_config = ConfigDict(
         json_schema_extra={
