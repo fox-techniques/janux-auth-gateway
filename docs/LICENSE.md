@@ -1,6 +1,6 @@
 # 📜 License 
 
-**JANUX Athentication  Gateway** is licensed under the [Apache License Version 2.0](http://www.apache.org/licenses/), January 2004.
+**JANUX Athentication Gateway** is licensed under the [Apache License Version 2.0](http://www.apache.org/licenses/), January 2004.
 
 ## TERMS AND CONDITIONS 
 

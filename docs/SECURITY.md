@@ -22,4 +22,4 @@ If you discover a security issue, please report it privately to us as soon as po
 
 ➌ 🛠️ We will work on a fix ASAP and coordinate disclosure. We follow responsible disclosure practices to ensure affected parties are notified properly.
 
-Thank you for helping keep **JANUX Authentication Gateway** secure! 🙏
+Thank you for helping keep **JANUX Authentication Gateway** secure! 🙌

@@ -12,7 +12,7 @@ We recommend seeking support in the following ways:
 
 ➋ 🔍 **Search & Ask on [Stack Overflow](https://stackoverflow.com).** If you're troubleshooting an issue or trying to use the project in a specific way, search existing questions or ask new ones on Stack Overflow.
 
-➌ 💬 **Join Our [Discord](https://discord.gg/pYEW7nxaDq) Community.** We don’t provide direct “customer support,” but we are happy to engage in discussions, answer questions, and chat about best practices. We’ll try our best to respond, but please be patient! 🐌
+➌ 💬 **Join Our [Discord](https://discord.gg/pYEW7nxaDq) or [Slack](https://join.slack.com/t/janux-auth-gateway/shared_invite/zt-2yqy7olsg-XKBzsIlh7IKMLQy1p1nLBA) Community.** We don’t provide direct “customer support,” but we are happy to engage in discussions, answer questions, and chat about best practices. We’ll try our best to respond, but please be patient! 🐌
 
 ➍ ✍️ Open a GitHub Issue (**Last Resort!**)
 

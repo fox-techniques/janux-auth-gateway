@@ -13,7 +13,6 @@ See our [Support Guide](SUPPORT.md). **Do not** use GitHub issues for general qu
 ## 🐞 Bug Reports & Issues  
 
 
-
 ### 🏁 DO 
 
 ✅ **Check the documentation & Support Guide** before opening an issue.  

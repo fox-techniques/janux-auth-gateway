@@ -47,6 +47,8 @@ extra:
       link: mailto:contact@fox-techniques.com?subject=Inquiry%20about%20JANUX-Authentication-Gateway
     - icon: fontawesome/brands/github
       link: https://github.com/fox-techniques/janux-auth-gateway
+    - icon: fontawesome/brands/slack
+      link: https://join.slack.com/t/janux-auth-gateway/shared_invite/zt-2yqy7olsg-XKBzsIlh7IKMLQy1p1nLBA
     - icon: fontawesome/brands/discord
       link: https://discord.gg/pYEW7nxaDq
     - icon: fontawesome/brands/x-twitter
