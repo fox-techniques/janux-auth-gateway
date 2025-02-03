@@ -122,6 +122,7 @@ async def create_admin_account(
         return
 
     existing_admin = await Admin.find_one(Admin.email == email)
+    masked_email = mask_email(email)
     if not existing_admin:
         admin = Admin(
             email=email,
@@ -130,9 +131,9 @@ async def create_admin_account(
             role=role,
         )
         await admin.insert()
-        logger.info(f"Admin account with role '{role}' created: {mask_email(email)}")
+        logger.info(f"Admin account with role '{role}' created: {masked_email}")
     else:
-        logger.info(f"Admin account {mask_email(email)} already exists.")
+        logger.info(f"Admin account {masked_email} already exists.")
 
 
 async def create_user_account(
@@ -155,6 +156,7 @@ async def create_user_account(
         return
 
     existing_tester = await User.find_one(User.email == email)
+    masked_email = mask_email(email)
     if not existing_tester:
         tester = User(
             email=email,
@@ -163,11 +165,9 @@ async def create_user_account(
             role=role,
         )
         await tester.insert()
-        logger.info(
-            f"Test user account with role '{role}' created: {mask_email(email)}"
-        )
+        logger.info(f"Test user account with role '{role}' created: {masked_email}")
     else:
-        logger.info(f"Test user account {mask_email(email)} already exists.")
+        logger.info(f"Test user account {masked_email} already exists.")
 
 
 async def authenticate_user(username: str, password: str) -> bool:
