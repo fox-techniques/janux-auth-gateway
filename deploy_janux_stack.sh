@@ -1,7 +1,12 @@
 #!/bin/bash
 
-# 🚀 Script to Rebuild & Deploy JANUX Authentication Gateway on Docker Swarm
-# Author: FOX Techniques
+# Script to Rebuild & Deploy JANUX Authentication Gateway on Docker Swarm
+# Author: FOX Techniques <ali.nabbi@fox-techniques.com>
+
+# Wait for services to start (retry up to 10 times)
+MAX_RETRIES=10
+RETRY_INTERVAL=3
+TRIES=0
 
 # Define constants
 STACK_NAME="janux-stack"
@@ -56,23 +61,42 @@ fi
 echo "🚢 Deploying stack: ${STACK_NAME}"
 docker stack deploy -c docker-compose.yml "${STACK_NAME}"
 
-# Wait for services to start
-sleep 5
+# Wait for services to start (retry up to 10 times)
+MAX_RETRIES=10
+RETRY_INTERVAL=3
+TRIES=0
 
-# Check if the service is running
-if docker service ls | grep -w "${STACK_NAME}_${SERVICE_NAME}" > /dev/null 2>&1; then
-    echo "✅ Service '${STACK_NAME}_${SERVICE_NAME}' is running."
-else
-    echo "❌ ERROR: Service '${STACK_NAME}_${SERVICE_NAME}' failed to start. Check logs."
-    exit 1
-fi
+echo "⏳ Waiting for '${STACK_NAME}_${SERVICE_NAME}' to become ready..."
+while ! docker service ls | grep -w "${STACK_NAME}_${SERVICE_NAME}" | grep -w "1/1" > /dev/null 2>&1; do
+    TRIES=$((TRIES + 1))
+    if [ "$TRIES" -ge "$MAX_RETRIES" ]; then
+        echo "❌ ERROR: Service '${STACK_NAME}_${SERVICE_NAME}' failed to start after $((MAX_RETRIES * RETRY_INTERVAL)) seconds. Check logs."
+        exit 1
+    fi
+    echo "⏳ Service not ready yet... retrying in ${RETRY_INTERVAL}s (${TRIES}/${MAX_RETRIES})"
+    sleep "$RETRY_INTERVAL"
+done
+
+echo "✅ Service '${STACK_NAME}_${SERVICE_NAME}' is running."
 
 # Display running services
 echo "📋 Running services:"
 docker service ls
 
-# Test the health endpoint
-echo "🩺 Checking service health..."
-curl -s http://localhost:8000/health && echo "✅ API is reachable!" || echo "❌ ERROR: API is NOT reachable!"
+# Test the health endpoint (retry up to 5 times)
+MAX_HEALTH_RETRIES=5
+HEALTH_TRIES=0
 
+echo "🩺 Checking service health..."
+while ! curl -s http://localhost:8000/health > /dev/null; do
+    HEALTH_TRIES=$((HEALTH_TRIES + 1))
+    if [ "$HEALTH_TRIES" -ge "$MAX_HEALTH_RETRIES" ]; then
+        echo "❌ ERROR: API is NOT reachable after $((MAX_HEALTH_RETRIES * RETRY_INTERVAL)) seconds."
+        exit 1
+    fi
+    echo "🔄 API not ready yet... retrying in ${RETRY_INTERVAL}s (${HEALTH_TRIES}/${MAX_HEALTH_RETRIES})"
+    sleep "$RETRY_INTERVAL"
+done
+
+echo "✅ API is reachable!"
 echo "🎉 Deployment complete!"

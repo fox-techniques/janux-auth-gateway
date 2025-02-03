@@ -12,7 +12,6 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
 import os
-import glob
 
 from typing import Optional, List
 
@@ -37,18 +36,22 @@ def read_secret(secret_name):
     return os.getenv(secret_name)  # Fallback to environment variable
 
 
+import os
+import glob
+
+
 def read_jwt_key(key_type: str) -> str:
     """
-    Reads a private or public key from the appropriate secret storage location.
+    Reads a private or public key from Docker Secrets or local development folder.
 
-    - Looks for `private*.pem` or `public*.pem` in `/run/secrets/` (Docker)
-    - Falls back to `./secrets/` (Local Development)
+    - In Docker, reads from `/run/secrets/jwt_private_key.pem` or `/run/secrets/jwt_public_key.pem`
+    - In Local Development, reads from `./secrets/jwt_private_key.pem` or `./secrets/jwt_public_key.pem`
 
     Args:
         key_type (str): Either "private" or "public".
 
     Returns:
-        str: The key content as a string.
+        str: The key file content as a string.
 
     Raises:
         ValueError: If no key file is found.
@@ -56,21 +59,19 @@ def read_jwt_key(key_type: str) -> str:
     if key_type not in ["private", "public"]:
         raise ValueError("Invalid key_type. Must be 'private' or 'public'.")
 
-    # Define search patterns
-    key_pattern = f"{key_type}*.pem"
+    # Define expected filenames
+    key_filename = f"jwt_{key_type}_key"
 
-    # Define search locations
+    # Define search locations (Docker first, then Local)
     search_paths = [
-        "/run/secrets/",  # Docker/K8s Secrets (Production)
-        "./secrets/",  # Local Development (Project Root)
+        f"/run/secrets/{key_filename}",  # Docker Secrets (Production)
+        f"./secrets/{key_filename}.pem",  # Local Development
     ]
 
-    # Look for a matching key file in the search locations
     for path in search_paths:
-        matching_files = glob.glob(os.path.join(path, key_pattern))
-        if matching_files:
-            key_file = matching_files[0]  # Use the first matching file
-            with open(key_file, "r") as file:
+        if os.path.exists(path):
+            print(f"Found key file with type: {key_type}")
+            with open(path, "r") as file:
                 return file.read().strip()
 
     raise ValueError(f"No {key_type} key file found in {search_paths}")
@@ -110,7 +111,7 @@ class Config:
     ALLOWED_ORIGINS: List[str] = get_env_variable("ALLOWED_ORIGINS", "*").split(",")
 
     # 🔐 Encryption Key (AES)
-    JANUX_ENCRYPTION_KEY = read_secret("janux_encryption_key".upper())
+    JANUX_ENCRYPTION_KEY = read_secret("janux_encryption_key")
 
     # 🔑 JWT Authentication Keys
     JWT_PRIVATE_KEY = read_jwt_key(key_type="private")
@@ -130,20 +131,20 @@ class Config:
     ADMIN_TOKEN_URL = get_env_variable("ADMIN_TOKEN_URL", "/auth/login")
 
     # 🛢️ Database (MongoDB)
-    MONGO_URI = read_secret("mongo_uri".upper())
+    MONGO_URI = read_secret("mongo_uri")
     MONGO_DATABASE_NAME = get_env_variable("MONGO_DATABASE_NAME", "users_db")
 
     # 👤 MongoDB Initial Admin Credentials
-    MONGO_ADMIN_EMAIL = read_secret("mongo_admin_email".upper())
-    MONGO_ADMIN_PASSWORD = read_secret("mongo_admin_password".upper())
-    MONGO_ADMIN_FULLNAME = read_secret("mongo_admin_fullname".upper())
-    MONGO_ADMIN_ROLE = read_secret("mongo_admin_role".upper())
+    MONGO_ADMIN_EMAIL = read_secret("mongo_admin_email")
+    MONGO_ADMIN_PASSWORD = read_secret("mongo_admin_password")
+    MONGO_ADMIN_FULLNAME = read_secret("mongo_admin_fullname")
+    MONGO_ADMIN_ROLE = read_secret("mongo_admin_role")
 
     # 👤 MongoDB Initial User Credentials
-    MONGO_USER_EMAIL = read_secret("mongo_user_email".upper())
-    MONGO_USER_PASSWORD = read_secret("mongo_user_password".upper())
-    MONGO_USER_FULLNAME = read_secret("mongo_user_fullname".upper())
-    MONGO_USER_ROLE = read_secret("mongo_user_role".upper())
+    MONGO_USER_EMAIL = read_secret("mongo_user_email")
+    MONGO_USER_PASSWORD = read_secret("mongo_user_password")
+    MONGO_USER_FULLNAME = read_secret("mongo_user_fullname")
+    MONGO_USER_ROLE = read_secret("mongo_user_role")
 
     # 🔄 Redis Configuration
     REDIS_HOST = get_env_variable("REDIS_HOST", "localhost")

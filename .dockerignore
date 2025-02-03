@@ -57,8 +57,6 @@ deploy_janux_stack.sh
 # Ignore Documentation & Miscellaneous Files
 docs/
 mkdocs.yml
-CHANGELOG.md
-LICENSE.md
 README.md
 
 # Ignore Node.js Files (If Any)

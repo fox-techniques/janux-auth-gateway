@@ -140,18 +140,18 @@ venv.bak/
 
 # Secrets
 secrets/*
-!secrets/private.example.pem
-!secrets/public.example.pem
-!secrets/JANUX_ENCRYPTION_KEY.example      
-!secrets/MONGO_URI.example          
-!secrets/MONGO_ADMIN_EMAIL.example      
-!secrets/MONGO_ADMIN_PASSWORD.example
-!secrets/MONGO_ADMIN_FULLNAME.example
-!secrets/MONGO_ADMIN_ROLE.example
-!secrets/MONGO_USER_EMAIL.example      
-!secrets/MONGO_USER_PASSWORD.example
-!secrets/MONGO_USER_FULLNAME.example
-!secrets/MONGO_USER_ROLE.example
+!secrets/jwt_private_key.example.pem
+!secrets/jwt_public_key.example.pem
+!secrets/janux_encryption_key.example      
+!secrets/mongo_uri.example          
+!secrets/mongo_admin_email.example      
+!secrets/mongo_admin_password.example
+!secrets/mongo_admin_fullname.example
+!secrets/mongo_admin_role.example
+!secrets/mongo_user_email.example      
+!secrets/mongo_user_password.example
+!secrets/mongo_user_fullname.example
+!secrets/mongo_user_role.example
 
 # Spyder project settings
 .spyderproject
