@@ -20,6 +20,7 @@ from typing import Optional
 from janux_auth_gateway.auth.passwords import verify_password, hash_password
 from janux_auth_gateway.config import Config
 from janux_auth_gateway.debug.custom_logger import get_logger
+from janux_auth_gateway.utils.email_utils import mask_email
 from janux_auth_gateway.models.user_model import User
 from janux_auth_gateway.models.admin_model import Admin
 
@@ -129,9 +130,9 @@ async def create_admin_account(
             role=role,
         )
         await admin.insert()
-        logger.info(f"Admin account with role '{role}' created: {email}")
+        logger.info(f"Admin account with role '{role}' created: {mask_email(email)}")
     else:
-        logger.info(f"Admin account {email} already exists.")
+        logger.info(f"Admin account {mask_email(email)} already exists.")
 
 
 async def create_user_account(
@@ -162,9 +163,11 @@ async def create_user_account(
             role=role,
         )
         await tester.insert()
-        logger.info(f"Test user account with role '{role}' created: {email}")
+        logger.info(
+            f"Test user account with role '{role}' created: {mask_email(email)}"
+        )
     else:
-        logger.info(f"Test user account {email} already exists.")
+        logger.info(f"Test user account {mask_email(email)} already exists.")
 
 
 async def authenticate_user(username: str, password: str) -> bool:
