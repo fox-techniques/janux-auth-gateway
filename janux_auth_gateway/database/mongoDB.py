@@ -131,7 +131,7 @@ async def create_admin_account(
             role=role,
         )
         await admin.insert()
-        logger.info(f"Admin account with role '{role}' created.")
+        logger.info(f"Admin account created.")
     else:
         logger.info(f"Admin account already exists.")
 
@@ -165,7 +165,7 @@ async def create_user_account(
             role=role,
         )
         await tester.insert()
-        logger.info(f"Test user account with role '{role}' created.")
+        logger.info(f"Test user account created.")
     else:
         logger.info(f"Test user account already exists.")
 
