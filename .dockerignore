@@ -22,6 +22,7 @@ secrets/
 *.crt
 *.cert
 /root/secrets/
+secrets/*  # Prevent copying local secrets into the image
 
 # Ignore Logs & Temp Files
 logs/
@@ -32,9 +33,10 @@ var/log/janux/
 # Ignore Build & Dependency Files
 dist/
 build/
-poetry.lock
 pip-wheel-metadata/
 site-packages/
+*.egg-info/
+*.whl
 
 # Ignore Test & CI/CD Files
 tests/
@@ -44,12 +46,23 @@ coverage.*
 .nox/
 .jenkins/
 .github/
+setup_docker_secrets.sh  # Deployment helper script, not needed in the image
 
-# Ignore Docker Files That Shouldn't Be in the Image
+# Ignore Docker & CI/CD Files That Shouldn't Be in the Image
 docker-compose.yml
 docker-compose.override.yml
 docker-compose.prod.yml
-setup_docker_secrets.sh
+deploy_janux_stack.sh
 
-# Ignore Miscellaneous Files
+# Ignore Documentation & Miscellaneous Files
+docs/
+mkdocs.yml
+CHANGELOG.md
+LICENSE.md
+README.md
+
+# Ignore Node.js Files (If Any)
 node_modules/
+package.json
+package-lock.json
+yarn.lock

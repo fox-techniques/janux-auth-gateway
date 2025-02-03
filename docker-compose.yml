@@ -1,35 +1,87 @@
 services:
-  mongodb:
-    image: mongo:latest
-    container_name: mongodb
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME_FILE: /run/secrets/mongo_root_user
-      MONGO_INITDB_ROOT_PASSWORD_FILE: /run/secrets/mongo_root_password
-    secrets:
-      - mongo_root_user
-      - mongo_root_password
-
-  janux_auth_gateway:
-    build:
-      context: .
-    container_name: janux_auth_gateway
+  janux-auth-gateway:
+    image: janux-auth-gateway:latest
+    build: .
     ports:
       - "8000:8000"
-    environment:
-      ENVIRONMENT: production
-      MONGO_URI: mongodb://$(cat /run/secrets/mongo_root_user):$(cat /run/secrets/mongo_root_password)@mongodb:27017
-      AUTH_SECRET_KEY_FILE: /run/secrets/auth_secret_key
-    secrets:
-      - auth_secret_key
     depends_on:
       - mongodb
+      - redis
+    environment:
+      ENVIRONMENT: "test"
+      MONGO_DATABASE_NAME: "users_db"
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+      ALLOWED_ORIGINS: "*"
+      ACCESS_TOKEN_EXPIRE_MINUTES: "20"
+      TOKEN_ISSUER: "JANUX-server"
+      TOKEN_AUDIENCE: "JANUX-application"
+      USER_TOKEN_URL: "/auth/login"
+      ADMIN_TOKEN_URL: "/auth/login"
+    secrets:
+      - janux_encryption_key
+      - jwt_private_key
+      - jwt_public_key
+      - mongo_uri
+      - mongo_admin_email
+      - mongo_admin_password
+      - mongo_admin_fullname
+      - mongo_admin_role
+      - mongo_user_email
+      - mongo_user_password
+      - mongo_user_fullname
+      - mongo_user_role
+    networks:
+      - janux-network
+
+  mongodb:
+    image: mongo:6.0
+    container_name: mongodb
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: "users_db"
+    networks:
+      - janux-network
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: unless-stopped
+    networks:
+      - janux-network
+
+networks:
+  janux-network:
+    external: true
+
+volumes:
+  mongo-data:
 
 secrets:
-  mongo_root_user:
-    file: ./secrets/mongo_root_user.txt
-  mongo_root_password:
-    file: ./secrets/mongo_root_password.txt
-  auth_secret_key:
-    file: ./secrets/auth_secret_key.txt
+  janux_encryption_key:
+    external: true
+  jwt_private_key:
+    external: true
+  jwt_public_key:
+    external: true
+  mongo_uri:
+    external: true
+  mongo_admin_email:
+    external: true
+  mongo_admin_password:
+    external: true
+  mongo_admin_fullname:
+    external: true
+  mongo_admin_role:
+    external: true
+  mongo_user_email:
+    external: true
+  mongo_user_password:
+    external: true
+  mongo_user_fullname:
+    external: true
+  mongo_user_role:
+    external: true
+  
