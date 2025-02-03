@@ -79,7 +79,7 @@ def create_access_token(
         str: A signed JWT access token.
     """
     expires = expires_delta or timedelta(minutes=Config.ACCESS_TOKEN_EXPIRE_MINUTES)
-    return _create_jwt(data, expires, Config.PRIVATE_KEY)
+    return _create_jwt(data, expires, Config.JWT_PRIVATE_KEY)
 
 
 def create_refresh_token(data: Dict[str, Any]) -> str:
@@ -94,7 +94,7 @@ def create_refresh_token(data: Dict[str, Any]) -> str:
     """
     data["type"] = "refresh"
     return _create_jwt(
-        data, timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS), Config.PRIVATE_KEY
+        data, timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS), Config.JWT_PRIVATE_KEY
     )
 
 
@@ -120,7 +120,7 @@ def verify_jwt(token: str, redis_client=blacklist) -> Dict[str, Any]:
     try:
         return jwt.decode(
             token,
-            Config.PUBLIC_KEY,
+            Config.JWT_PUBLIC_KEY,
             algorithms=["RS256"],
             issuer=Config.ISSUER,
             audience=Config.AUDIENCE,

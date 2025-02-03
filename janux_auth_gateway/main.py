@@ -53,16 +53,13 @@ async def lifespan(app: FastAPI):
     try:
         logger.info("JANUX Authentication Application is starting up...")
 
-        environment = Config.ENVIRONMENT
-        containerized = Config.CONTAINER
+        environment = Config.ENVIRONMENT.lower()
+
+        # Detect if running inside a container
+        is_container = environment != "local"
 
         logger.info(f"Running in environment: {environment}")
-        logger.info(f"Containerized environment: {containerized}")
-
-        if containerized:
-            logger.info("Detected containerized environment.")
-        else:
-            logger.info("Running in local development mode.")
+        logger.info(f"Detected containerized environment: {is_container}")
 
         # Initialize MongoDB connection
         logger.info("Initializing database connection...")

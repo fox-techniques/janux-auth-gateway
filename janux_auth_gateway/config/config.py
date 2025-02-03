@@ -1,8 +1,7 @@
 """
 config.py
 
-Central configuration module for the application. This module loads and validates
-environment variables using python-dotenv and os.
+Central configuration module for the JANUX Authentication Gateway.
 
 Features:
 - Dynamically loads environment variables based on the specified environment.
@@ -13,29 +12,73 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
 import os
-from dotenv import load_dotenv, find_dotenv
+import glob
+
 from typing import Optional, List
 
-# Determine the environment and load the appropriate .env file
-env = os.getenv("ENVIRONMENT", "local")
-try:
-    env_file = find_dotenv(f".env.{env}")
-    if not env_file:
-        raise FileNotFoundError
-except FileNotFoundError:
-    env_file = find_dotenv(".env")
 
-if env_file:
-    load_dotenv(env_file)
-else:
-    raise FileNotFoundError(
-        f"No suitable environment file found for {env} or default .env"
-    )
+def read_secret(secret_name):
+    """
+    Reads secrets from:
+    1. `/run/secrets/` (Docker Secrets in Production)
+    2. `./secrets/` (Local Development on Host)
+    3. Falls back to environment variables if both locations fail.
+    """
+    secret_paths = [
+        f"/run/secrets/{secret_name}",  # Docker/Kubernetes Secrets (Production)
+        f"./secrets/{secret_name}",  # Local Development (Host System)
+    ]
+
+    for path in secret_paths:
+        if os.path.exists(path):
+            with open(path, "r") as file:
+                return file.read().strip()
+
+    return os.getenv(secret_name)  # Fallback to environment variable
+
+
+def read_jwt_key(key_type: str) -> str:
+    """
+    Reads a private or public key from the appropriate secret storage location.
+
+    - Looks for `private*.pem` or `public*.pem` in `/run/secrets/` (Docker)
+    - Falls back to `./secrets/` (Local Development)
+
+    Args:
+        key_type (str): Either "private" or "public".
+
+    Returns:
+        str: The key content as a string.
+
+    Raises:
+        ValueError: If no key file is found.
+    """
+    if key_type not in ["private", "public"]:
+        raise ValueError("Invalid key_type. Must be 'private' or 'public'.")
+
+    # Define search patterns
+    key_pattern = f"{key_type}*.pem"
+
+    # Define search locations
+    search_paths = [
+        "/run/secrets/",  # Docker/K8s Secrets (Production)
+        "./secrets/",  # Local Development (Project Root)
+    ]
+
+    # Look for a matching key file in the search locations
+    for path in search_paths:
+        matching_files = glob.glob(os.path.join(path, key_pattern))
+        if matching_files:
+            key_file = matching_files[0]  # Use the first matching file
+            with open(key_file, "r") as file:
+                return file.read().strip()
+
+    raise ValueError(f"No {key_type} key file found in {search_paths}")
 
 
 def get_env_variable(var_name: str, default: Optional[str] = None) -> str:
     """
-    Retrieve environment variables with an optional default.
+    Retrieve non-sensitive environment variables with an optional default.
 
     Args:
         var_name (str): The name of the environment variable to retrieve.
@@ -51,94 +94,83 @@ def get_env_variable(var_name: str, default: Optional[str] = None) -> str:
     if value is None:
         raise ValueError(
             f"Missing environment variable: '{var_name}'. "
-            "Please set it in your environment or .env file."
+            "Please set it in your environment."
         )
     return value
 
 
 class Config:
     """
-    Configuration class to centralize and validate environment variables.
+    Configuration class for JANUX Authentication Gateway.
+    Loads environment variables and secrets securely.
     """
 
-    # Application configuration
-    ENVIRONMENT = env
-    ALLOWED_ORIGINS: List[str] = get_env_variable("ALLOWED_ORIGINS", "").split(",")
-    CONTAINER = get_env_variable("CONTAINER", "False").lower() in ["true", "1"]
+    # Application settings
+    ENVIRONMENT = get_env_variable("ENVIRONMENT", "local")
+    ALLOWED_ORIGINS: List[str] = get_env_variable("ALLOWED_ORIGINS", "*").split(",")
 
-    # Encryption configuration
-    ENCRYPTION_KEY = get_env_variable("JANUX_ENCRYPTION_KEY")
-    if len(ENCRYPTION_KEY) != 44:
-        raise ValueError(
-            "JANUX_ENCRYPTION_KEY must be a 32-byte base64-encoded string."
-        )
+    # 🔐 Encryption Key (AES)
+    JANUX_ENCRYPTION_KEY = read_secret("janux_encryption_key".upper())
 
-    # JWT configuration
-    PRIVATE_KEY_PATH = get_env_variable("AUTH_PRIVATE_KEY_PATH", "private.pem")
-    PUBLIC_KEY_PATH = get_env_variable("AUTH_PUBLIC_KEY_PATH", "public.pem")
+    # 🔑 JWT Authentication Keys
+    JWT_PRIVATE_KEY = read_jwt_key(key_type="private")
+    JWT_PUBLIC_KEY = read_jwt_key(key_type="public")
 
-    # Load private and public keys securely
-    try:
-        with open(PRIVATE_KEY_PATH, "r") as f:
-            PRIVATE_KEY = f.read()
-        with open(PUBLIC_KEY_PATH, "r") as f:
-            PUBLIC_KEY = f.read()
-    except FileNotFoundError:
-        raise ValueError("JWT private/public key files not found.")
+    JWT_ALGORITHM = "RS256"
 
-    # Restrict allowed algorithms
-    ALGORITHM = "RS256"
+    # 🔥 JWT Token Settings
     ACCESS_TOKEN_EXPIRE_MINUTES = int(
         get_env_variable("ACCESS_TOKEN_EXPIRE_MINUTES", "20")
     )
+    TOKEN_ISSUER = get_env_variable("TOKEN_ISSUER", "JANUX-server")
+    TOKEN_AUDIENCE = get_env_variable("TOKEN_AUDIENCE", "JANUX-application")
 
-    # Token issuer and audience
-    ISSUER = get_env_variable("ISSUER", "JANUX-server")
-    AUDIENCE = get_env_variable("AUDIENCE", "JANUX-application")
+    # 🗝️ Token Endpoints
+    USER_TOKEN_URL = get_env_variable("USER_TOKEN_URL", "/auth/login")
+    ADMIN_TOKEN_URL = get_env_variable("ADMIN_TOKEN_URL", "/auth/login")
 
-    # Token URL
-    USER_TOKEN_URL = get_env_variable("USER_TOKEN_URL")
-    ADMIN_TOKEN_URL = get_env_variable("ADMIN_TOKEN_URL")
+    # 🛢️ Database (MongoDB)
+    MONGO_URI = read_secret("mongo_uri".upper())
+    MONGO_DATABASE_NAME = get_env_variable("MONGO_DATABASE_NAME", "users_db")
 
-    # MongoDB connection URI
-    MONGO_URI = get_env_variable("MONGO_URI")
-    MONGO_DATABASE_NAME = get_env_variable("MONGO_DATABASE_NAME")
+    # 👤 MongoDB Initial Admin Credentials
+    MONGO_ADMIN_EMAIL = read_secret("mongo_admin_email".upper())
+    MONGO_ADMIN_PASSWORD = read_secret("mongo_admin_password".upper())
+    MONGO_ADMIN_FULLNAME = read_secret("mongo_admin_fullname".upper())
+    MONGO_ADMIN_ROLE = read_secret("mongo_admin_role".upper())
 
-    # MongoDB initial admin and user credentials
-    MONGO_ADMIN_EMAIL = get_env_variable("MONGO_INIT_ADMIN_EMAIL")
-    MONGO_ADMIN_PASSWORD = get_env_variable("MONGO_INIT_ADMIN_PASSWORD")
-    MONGO_ADMIN_FULLNAME = get_env_variable("MONGO_INIT_ADMIN_FULLNAME")
-    MONGO_ADMIN_ROLE = get_env_variable("MONGO_INIT_ADMIN_ROLE", "super_admin")
+    # 👤 MongoDB Initial User Credentials
+    MONGO_USER_EMAIL = read_secret("mongo_user_email".upper())
+    MONGO_USER_PASSWORD = read_secret("mongo_user_password".upper())
+    MONGO_USER_FULLNAME = read_secret("mongo_user_fullname".upper())
+    MONGO_USER_ROLE = read_secret("mongo_user_role".upper())
 
-    MONGO_USER_EMAIL = get_env_variable("MONGO_INIT_USER_EMAIL")
-    MONGO_USER_PASSWORD = get_env_variable("MONGO_INIT_USER_PASSWORD")
-    MONGO_USER_FULLNAME = get_env_variable("MONGO_INIT_USER_FULLNAME")
-    MONGO_USER_ROLE = get_env_variable("MONGO_INIT_USER_ROLE", "user")
-
-    # REDIS configuration
+    # 🔄 Redis Configuration
     REDIS_HOST = get_env_variable("REDIS_HOST", "localhost")
-    REDIS_PORT = get_env_variable("REDIS_PORT", "6379")
+    REDIS_PORT = int(get_env_variable("REDIS_PORT", "6379"))
 
     @staticmethod
     def validate():
         """
-        Validates the presence of critical environment variables.
-
-        Raises:
-            ValueError: If any required environment variable is missing or invalid.
+        Ensures critical secrets are available and valid.
+        Raises an error if required values are missing.
         """
-        validators = {
-            "PRIVATE_KEY": lambda v: isinstance(v, str) and "BEGIN PRIVATE KEY" in v,
-            "PUBLIC_KEY": lambda v: isinstance(v, str) and "BEGIN PUBLIC KEY" in v,
-            "MONGO_URI": lambda v: v.startswith("mongodb://")
-            or v.startswith("mongodb+srv://"),
-        }
+        if not Config.JANUX_ENCRYPTION_KEY:
+            raise ValueError("Missing `janux_encryption_key` for encryption.")
+        if (
+            not Config.JWT_PRIVATE_KEY
+            or "BEGIN PRIVATE KEY" not in Config.JWT_PRIVATE_KEY
+        ):
+            raise ValueError("Invalid or missing `jwt_private_key` for signing JWTs.")
+        if not Config.JWT_PUBLIC_KEY or "BEGIN PUBLIC KEY" not in Config.JWT_PUBLIC_KEY:
+            raise ValueError("Invalid or missing `jwt_public_key` for verifying JWTs.")
+        if not Config.MONGO_URI:
+            raise ValueError("Missing `mongo_uri` for database connection.")
+        if not Config.MONGO_ADMIN_PASSWORD:
+            raise ValueError("Missing `mongo_admin_password`.")
+        if not Config.MONGO_USER_PASSWORD:
+            raise ValueError("Missing `mongo_user_password`.")
 
-        for var, validator in validators.items():
-            value = getattr(Config, var, None)
-            if not validator(value):
-                raise ValueError(f"Invalid configuration for {var}: {value}")
 
-
-# Validate configuration at import time
+# Validate configuration on startup
 Config.validate()

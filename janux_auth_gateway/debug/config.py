@@ -19,13 +19,14 @@ import logging.config
 from pythonjsonlogger import jsonlogger
 
 # Detect environment (default: local)
-ENVIRONMENT = os.getenv("ENVIRONMENT", "local")
+ENVIRONMENT = os.getenv("ENVIRONMENT", "local").lower()
 
-# Define log directory based on the environment
-if ENVIRONMENT == "container":
-    LOGS_DIR = "/var/log/app"  # Container log path
-else:
-    LOGS_DIR = os.path.join(os.getcwd(), "logs")  # Local log path
+# Detect if running inside a container
+IS_CONTAINER = ENVIRONMENT != "local"
+
+# Define log directory based on environment
+LOGS_DIR = "/var/log/janux" if IS_CONTAINER else os.path.join(os.getcwd(), "logs")
+
 
 # Ensure log directory exists
 if not os.path.exists(LOGS_DIR):

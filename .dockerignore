@@ -1,0 +1,55 @@
+# Ignore Python Cache Files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore IDE & Editor Files
+.vscode/
+.idea/
+*.sublime-workspace
+
+# Ignore OS-Specific Files
+.DS_Store
+Thumbs.db
+
+# Ignore Local & Development Files
+.env
+.env.*
+secrets/
+*.pem
+*.key
+*.crt
+*.cert
+/root/secrets/
+
+# Ignore Logs & Temp Files
+logs/
+var/log/janux/
+*.log
+*.tmp
+
+# Ignore Build & Dependency Files
+dist/
+build/
+poetry.lock
+pip-wheel-metadata/
+site-packages/
+
+# Ignore Test & CI/CD Files
+tests/
+pytest.ini
+tox.ini
+coverage.*
+.nox/
+.jenkins/
+.github/
+
+# Ignore Docker Files That Shouldn't Be in the Image
+docker-compose.yml
+docker-compose.override.yml
+docker-compose.prod.yml
+setup_docker_secrets.sh
+
+# Ignore Miscellaneous Files
+node_modules/
