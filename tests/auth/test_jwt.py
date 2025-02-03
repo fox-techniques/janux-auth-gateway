@@ -57,8 +57,8 @@ def mock_keys(mocker):
     )
 
     # Mock Config values with valid RSA keys
-    mocker.patch.object(Config, "PRIVATE_KEY", private_pem)
-    mocker.patch.object(Config, "PUBLIC_KEY", public_pem)
+    mocker.patch.object(Config, "JWT_PRIVATE_KEY", private_pem)
+    mocker.patch.object(Config, "JWT_PUBLIC_KEY", public_pem)
 
 
 @pytest.fixture()
@@ -130,7 +130,7 @@ def test_verify_expired_jwt(mock_keys, fake_redis):
     """
     expired_token = jwt.encode(
         {"sub": "testuser", "exp": 0},
-        Config.PRIVATE_KEY,
+        Config.JWT_PRIVATE_KEY,
         algorithm="RS256",
     )
 

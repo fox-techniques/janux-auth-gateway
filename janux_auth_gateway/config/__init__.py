@@ -13,6 +13,7 @@ Submodules:
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
-from .config import Config, get_env_variable
+from .config import Config, _read_secret, _read_jwt_key, _get_env_variable
 
-__all__ = ["Config", "get_env_variable"]
+# Expose the Config class for external use.
+__all__ = ["Config"]

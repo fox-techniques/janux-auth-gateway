@@ -20,7 +20,6 @@ from typing import Optional
 from janux_auth_gateway.auth.passwords import verify_password, hash_password
 from janux_auth_gateway.config import Config
 from janux_auth_gateway.debug.custom_logger import get_logger
-from janux_auth_gateway.utils.email_utils import mask_email
 from janux_auth_gateway.models.user_model import User
 from janux_auth_gateway.models.admin_model import Admin
 

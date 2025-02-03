@@ -16,7 +16,7 @@ import os
 from typing import Optional, List
 
 
-def read_secret(secret_name):
+def _read_secret(secret_name):
     """
     Reads secrets from:
     1. `/run/secrets/` (Docker Secrets in Production)
@@ -36,11 +36,7 @@ def read_secret(secret_name):
     return os.getenv(secret_name)  # Fallback to environment variable
 
 
-import os
-import glob
-
-
-def read_jwt_key(key_type: str) -> str:
+def _read_jwt_key(key_type: str) -> str:
     """
     Reads a private or public key from Docker Secrets or local development folder.
 
@@ -77,7 +73,7 @@ def read_jwt_key(key_type: str) -> str:
     raise ValueError(f"No {key_type} key file found in {search_paths}")
 
 
-def get_env_variable(var_name: str, default: Optional[str] = None) -> str:
+def _get_env_variable(var_name: str, default: Optional[str] = None) -> str:
     """
     Retrieve non-sensitive environment variables with an optional default.
 
@@ -107,48 +103,48 @@ class Config:
     """
 
     # Application settings
-    ENVIRONMENT = get_env_variable("ENVIRONMENT", "local")
-    ALLOWED_ORIGINS: List[str] = get_env_variable("ALLOWED_ORIGINS", "*").split(",")
+    ENVIRONMENT = _get_env_variable("ENVIRONMENT", "local")
+    ALLOWED_ORIGINS: List[str] = _get_env_variable("ALLOWED_ORIGINS", "*").split(",")
 
     # 🔐 Encryption Key (AES)
-    JANUX_ENCRYPTION_KEY = read_secret("janux_encryption_key")
+    JANUX_ENCRYPTION_KEY = _read_secret("janux_encryption_key")
 
     # 🔑 JWT Authentication Keys
-    JWT_PRIVATE_KEY = read_jwt_key(key_type="private")
-    JWT_PUBLIC_KEY = read_jwt_key(key_type="public")
+    JWT_PRIVATE_KEY = _read_jwt_key(key_type="private")
+    JWT_PUBLIC_KEY = _read_jwt_key(key_type="public")
 
     JWT_ALGORITHM = "RS256"
 
     # 🔥 JWT Token Settings
     ACCESS_TOKEN_EXPIRE_MINUTES = int(
-        get_env_variable("ACCESS_TOKEN_EXPIRE_MINUTES", "20")
+        _get_env_variable("ACCESS_TOKEN_EXPIRE_MINUTES", "20")
     )
-    TOKEN_ISSUER = get_env_variable("TOKEN_ISSUER", "JANUX-server")
-    TOKEN_AUDIENCE = get_env_variable("TOKEN_AUDIENCE", "JANUX-application")
+    ISSUER = _get_env_variable("TOKEN_ISSUER", "JANUX-server")
+    AUDIENCE = _get_env_variable("TOKEN_AUDIENCE", "JANUX-application")
 
     # 🗝️ Token Endpoints
-    USER_TOKEN_URL = get_env_variable("USER_TOKEN_URL", "/auth/login")
-    ADMIN_TOKEN_URL = get_env_variable("ADMIN_TOKEN_URL", "/auth/login")
+    USER_TOKEN_URL = _get_env_variable("USER_TOKEN_URL", "/auth/login")
+    ADMIN_TOKEN_URL = _get_env_variable("ADMIN_TOKEN_URL", "/auth/login")
 
     # 🛢️ Database (MongoDB)
-    MONGO_URI = read_secret("mongo_uri")
-    MONGO_DATABASE_NAME = get_env_variable("MONGO_DATABASE_NAME", "users_db")
+    MONGO_URI = _read_secret("mongo_uri")
+    MONGO_DATABASE_NAME = _get_env_variable("MONGO_DATABASE_NAME", "users_db")
 
     # 👤 MongoDB Initial Admin Credentials
-    MONGO_ADMIN_EMAIL = read_secret("mongo_admin_email")
-    MONGO_ADMIN_PASSWORD = read_secret("mongo_admin_password")
-    MONGO_ADMIN_FULLNAME = read_secret("mongo_admin_fullname")
-    MONGO_ADMIN_ROLE = read_secret("mongo_admin_role")
+    MONGO_ADMIN_EMAIL = _read_secret("mongo_admin_email")
+    MONGO_ADMIN_PASSWORD = _read_secret("mongo_admin_password")
+    MONGO_ADMIN_FULLNAME = _read_secret("mongo_admin_fullname")
+    MONGO_ADMIN_ROLE = _read_secret("mongo_admin_role")
 
     # 👤 MongoDB Initial User Credentials
-    MONGO_USER_EMAIL = read_secret("mongo_user_email")
-    MONGO_USER_PASSWORD = read_secret("mongo_user_password")
-    MONGO_USER_FULLNAME = read_secret("mongo_user_fullname")
-    MONGO_USER_ROLE = read_secret("mongo_user_role")
+    MONGO_USER_EMAIL = _read_secret("mongo_user_email")
+    MONGO_USER_PASSWORD = _read_secret("mongo_user_password")
+    MONGO_USER_FULLNAME = _read_secret("mongo_user_fullname")
+    MONGO_USER_ROLE = _read_secret("mongo_user_role")
 
     # 🔄 Redis Configuration
-    REDIS_HOST = get_env_variable("REDIS_HOST", "localhost")
-    REDIS_PORT = int(get_env_variable("REDIS_PORT", "6379"))
+    REDIS_HOST = _get_env_variable("REDIS_HOST", "localhost")
+    REDIS_PORT = int(_get_env_variable("REDIS_PORT", "6379"))
 
     @staticmethod
     def validate():
