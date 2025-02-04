@@ -9,6 +9,11 @@
 **JANUX Authentication Gateway** is a high-performance, modular, and extensible authentication microservice built with **FastAPI**. It provides secure user and admin authentication, JWT management, and seamless MongoDB integration via Beanie ODM. Designed for developers and organizations, JANUX ensures scalability, flexibility, and security—making it ideal for **SaaS platforms, APIs, and enterprise applications** that require a robust authentication system.
 
 
+## Documentation
+
+The complete documentation is available on **[GitHub Pages](https://fox-techniques.github.io/janux-auth-gateway/)**.
+
+
 ## Key Features
 
 - **FastAPI-based** – Asynchronous, high-performance authentication.
