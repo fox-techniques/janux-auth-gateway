@@ -24,6 +24,11 @@ jobs:
     runs-on: ubuntu-latest
     environment: release-with-approval
 
+    permissions:
+      contents: read   
+      packages: write  
+      id-token: write 
+
     steps:
       # Step 1: Check out the repository
       - name: Checkout code

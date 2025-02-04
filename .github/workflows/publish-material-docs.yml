@@ -10,16 +10,14 @@ on:
 
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  build-and-push:
-    name: Build and Push
+  publish-to-gh-pages:
+    name: Publish to GitHub Pages
     runs-on: ubuntu-latest
     environment: release-with-approval
-
-    permissions:
-      contents: read   
-      packages: write  
-      id-token: write  
 
     steps:
       - name: Checkout code
