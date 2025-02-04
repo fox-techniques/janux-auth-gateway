@@ -46,6 +46,7 @@ install those packages separately.
 
 ```bash
 poetry add janux-auth-gateway
+
 ```
 
 This command downloads and installs the package and its dependencies and adds the package as a dependency in your `pyproject.toml`.
@@ -54,12 +55,14 @@ After installation, you can start using the package in your project. If you need
 
 ```bash
 poetry shell
+
 ```
 
 Verify the Installation:
 
 ```bash
 poetry show janux-auth-gateway
+
 ```
 
 Updating the Package:
@@ -67,7 +70,9 @@ Updating the Package:
 ```bash
 poetry update janux-auth-gateway
 ```
+
 ---
+
 
 ## 🐙 GitHub
 
