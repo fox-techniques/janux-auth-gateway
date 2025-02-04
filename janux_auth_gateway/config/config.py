@@ -24,7 +24,7 @@ def _read_secret(secret_name):
     3. Falls back to environment variables if both locations fail.
     """
     secret_paths = [
-        f"/run/secrets/{secret_name}",  # Docker/Kubernetes Secrets (Production)
+        f"/run/secrets/{secret_name}",  # Docker Swarm/Kubernetes (Production)
         f"./secrets/{secret_name}",  # Local Development (Host System)
     ]
 
@@ -60,7 +60,8 @@ def _read_jwt_key(key_type: str) -> str:
 
     # Define search locations (Docker first, then Local)
     search_paths = [
-        f"/run/secrets/{key_filename}",  # Docker Secrets (Production)
+        f"/run/secrets/{key_filename}",  # Docker Swarm (Production)
+        f"/run/secrets/{key_filename}.pem",  # Standalone deployment
         f"./secrets/{key_filename}.pem",  # Local Development
     ]
 

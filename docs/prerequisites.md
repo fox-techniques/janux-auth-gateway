@@ -25,7 +25,7 @@ For installation guides and troubleshooting, refer to the [RealPython](https://r
 === "pip"
 
 
-    !!! tip
+    !!! info "Knowledge"
 
         If you don't have prior experience with Python, we recommend reading
         [Using Python's pip to Manage Your Projects' Dependencies], which is a

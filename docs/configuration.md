@@ -1,38 +1,24 @@
 # 🔧 Configuration 
 
-???+ info
+**JANUX Authentication Gateway** relies on environment variables and Docker secrets to securely store configuration values. Below is a guide on how to configure the service.
 
-    Set configuration before installation.
 
-## ⚙️ Environment Variables
+## 🌍 Environment Variables 
 
-**JANUX** uses environment variables for configuration. You can set these using a .env file or system environment variables.
+For non-sensitive settings, **JANUX** loads configuration from a `.env` file or system environment variables. The following default `.env.example` file is provided for local development. 
 
-➊ Create a .env File (Recommended for Local Development)
-
-Create a .env file in the project root:
+Create a `.env` file in the project root:
 
 ```bash title=".env"
 # ========================
 # 🌍 Environment Settings
 # ========================
 ENVIRONMENT=local
-CONTAINER=True
 ALLOWED_ORIGINS="*"
-
-# ========================
-# 🔒 AES Encryption Settings
-# ========================
-# Encryption settings for the key pair encryption
-JANUX_ENCRYPTION_KEY="your_generated_openssl_base64_32character_key"
 
 # ========================
 # 🔐 Authentication (JWT)
 # ========================
-# Paths to private/public keys (used for RS256 JWT signing)
-AUTH_PRIVATE_KEY_PATH=keys/private.pem
-AUTH_PUBLIC_KEY_PATH=keys/public.pem
-
 # Token expiration time
 ACCESS_TOKEN_EXPIRE_MINUTES=20
 
@@ -49,49 +35,89 @@ ADMIN_TOKEN_URL=/auth/login
 # ========================
 # 🗄️ Database Configuration
 # ========================
-MONGO_URI=mongodb://localhost:27017
 MONGO_DATABASE_NAME=users_db
-
-# Initial user and admin account 
-MONGO_INIT_ADMIN_EMAIL=super.admin@example.com
-MONGO_INIT_ADMIN_PASSWORD=SuperAdminPassw0rd123!
-MONGO_INIT_ADMIN_FULLNAME="Super Adminovski"
-MONGO_INIT_ADMIN_ROLE=super_admin
-
-MONGO_INIT_USER_EMAIL=test.user@example.com
-MONGO_INIT_USER_PASSWORD=TestUserPassw0rd123!
-MONGO_INIT_USER_FULLNAME="Test Userovski"
-MONGO_INIT_USER_ROLE=user
 
 # ========================
 # 🇷 REDIS Configuration
 # ========================
-REDIS_HOST=localhost
+REDIS_HOST=redis
 REDIS_PORT=6379
 ```
 
-???+ warning
+To use this configuration, copy `.env.example` to `.env`, and modify the values as needed.
 
-    Ensure JANUX_ENCRYPTION_KEY is a valid 32-byte base64-encoded string!
+!!! tip "Note" 
+
+    **JANUX** accepts `.env` and `.env.local` for development. 
+    
+    **For production or any other containerized enviroments**, use `.env.<enviroment>` e.g. `.env.test` or `.env.production`.
 
 
-➋ Set Environment Variables via CLI (For Production & Docker)
+!!! warning "IMPORTANT"
+
+    Ensure **JANUX_ENCRYPTION_KEY** is a valid **32-byte base64-encoded** string!
 
 
-=== "Linux/macOS"
-  
-    ```bash
-    export ENVIRONMENT=production
-    export MONGO_URI="mongodb://mongodb:27017/janux"
-    export REDIS_HOST=redis
-    ```
+## 🔐 Secure Secrets with Docker
 
-=== "Windows (PowerShell)"
+For sensitive data, **JANUX** does NOT store credentials in `.env` files but instead loads them from **Docker secrets**. This ensures that sensitive information (e.g., database credentials, encryption keys) is not stored in source code or environment variables.
 
-    ```powershell
-    $env:ENVIRONMENT="production"
-    $env:MONGO_URI="mongodb://mongodb:27017/janux"
-    $env:REDIS_HOST="redis"
-    ```
+The expected structure for secrets in local development mimics Docker secrets:
 
-Now that environment variables are set, continue with **installation**. 🎯
+```
+📁 secrets/
+├── janux_encryption_key
+├── jwt_private_key.pem
+├── jwt_public_key.pem
+├── mongo_uri
+├── mongo_admin_email
+├── mongo_admin_password
+├── mongo_admin_fullname
+├── mongo_admin_role
+├── mongo_user_email
+├── mongo_user_password
+├── mongo_user_fullname
+└── mongo_user_role
+```
+
+!!! example "Content" 
+    
+    Each secret file contains **only the value of the secret, without quotes or extra characters.**
+
+
+## 🕵️‍♂️ Setting Up Docker Secrets
+
+If running with Docker Compose, **JANUX** automatically loads secrets from `/run/secrets/`:
+
+
+➊ To grant execute permissions, run the following command:
+
+```bash
+chmod +x ./setup_docker_secret.sh
+```
+
+➋ Next, to create these secrets, run the following command in the terminal:
+
+```bash
+./setup_docker_secret.sh
+```
+
+Prior to the deployment, this script will populate **Docker secrets** in `/run/secrets/` by reading from local files.
+
+
+## 🔄 Loading Secrets in the Application
+
+**JANUX** automatically detects whether it is running:
+
+
+|Enviroment | Secrets  |
+|--- |--- |
+| Containerized environment (Docker, Kubernetes) | From `/run/secrets/`|
+| Local / development | From `./secrets/` |
+| As a fallback | From environment variables |
+
+
+
+---
+
+Now that environment variables and secrets are set, continue with **installation**. 🎯

@@ -67,6 +67,7 @@ Updating the Package:
 ```bash
 poetry update janux-auth-gateway
 ```
+---
 
 ## 🐙 GitHub
 
@@ -78,38 +79,209 @@ want to use the very latest version:
 git clone https://github.com/fox-techniques/janux-auth-gateway.git
 cd janux-auth-gateway
 pip install -e .
+
 ```
+
+---
+
 
 ## 🐳 Docker
 
-If you prefer containerized deployment, use the official Docker image:
+**JANUX** can be run as a Standalone Docker Container with MongoDB & Redis.
+
+➊ Check If **MongoDB & Redis** Are Already Running
+
+Before running **JANUX**, ensure MongoDB and Redis are running.
 
 ```bash
-docker pull fox-techniques/janux-auth-gateway
+docker ps
 ```
 
-To run the container:
+✅ Expected Output:
+
+|CONTAINER ID  | IMAGE        | STATUS       | PORTS |
+|---|---|---|---|
+|abc123xyz     | mongo:latest | Up 10 minutes| 27017->27017/tcp|
+|def456uvw     | redis:latest | Up 10 minutes| 6379->6379/tcp|
+
+???+ failure "FAILED"
+
+    🚨 If **MongoDB or Redis** is missing, start them manually:
+
+    ```bash
+    docker run -d --name mongodb -p 27017:27017 mongo:latest
+    docker run -d --name redis -p 6379:6379 redis:latest
+    ```
+
+➋  Create a **Shared Docker Network**
+
+Since MongoDB and Redis are in bridge mode, but JANUX needs to communicate with them, we must create a shared network.
 
 ```bash
-docker run -d -p 8000:8000 --name janux-auth-gateway fox-techniques/janux-auth-gateway
+docker network create janux-network
 ```
 
+✅ Expected Output:
 
-## 🚢 Docker Compose
+|NETWORK ID    | NAME           | DRIVER   | SCOPE|
+|---|---|---|---|
+|a1b2c3d4e5f6  | janux-network  | bridge   | local|
 
-For multi-container setups including **MongoDB** and **Redis**, use Docker Compose:
+✅ Connect MongoDB & Redis to janux-network
 
 ```bash
-docker compose up -d
+docker network connect janux-network mongodb
+docker network connect janux-network redis
 ```
 
-To stop services:
+✅ Now,** MongoDB and Redis** are reachable inside **janux-network.** To verify:
 
 ```bash
-docker-compose down
+docker network inspect janux-network | grep '"Name":'
 ```
 
-🤩 Fantastic! Continue to the **usage**. Let's keep going...🚀
+???+ failure "FAILED"
+
+    🚨 If MongoDB is missing from the network, rerun:
+
+    ```bash
+    docker network connect janux-network mongodb
+    ```
+
+➍ Build **JANUX Authentication Gateway** Docker Image
+
+Ensure the JANUX Docker image is up-to-date:
+```bash
+docker build -t janux-auth-gateway-standalone .
+```
+
+➎ Run **JANUX Standalone**
+
+Now, start **JANUX** inside **janux-network** and mount secrets correctly. Run **JANUX with Correct Networking & Secrets**
+
+```bash
+docker run -p 8000:8000 \
+  --network janux-network \
+  -e MONGO_URI="mongodb://mongodb:27017/users_db" \
+  -e REDIS_HOST="redis" \
+  -e REDIS_PORT="6379" \
+  -v $(pwd)/secrets:/run/secrets:ro \
+  janux-auth-gateway
+```
+
+
+
+---
+
+## 🚢 Docker Swarm (RECOMMENEDED)
+
+Secrets ensure sensitive information (like private keys and database credentials) is securely stored. For multi-container setups including **MongoDB** and **Redis**: 
+
+!!! danger "ATTENTION"
+
+    Make sure you have **JANUX** configured with `.env`. If not, please go to the section [configuration](configuration.md).
+
+
+➊ **Grant permissions**
+
+First, first make sure permissions are set by running the following command in the terminal:
+
+```bash
+chmod +x ./setup_docker_secret.sh
+```
+
+➋ **Configure Docker Secrets**
+
+Next, to create secrets, run the following command in the terminal:
+
+```bash
+./setup_docker_secret.sh
+```
+
+This script will:
+
+- Check if Docker Swarm is initialized
+- Create/update required secrets for authentication and database access
+
+➌ **Verify Secrets**
+
+```bash
+docker secret ls
+```
+
+✅ *Expected Output:*
+
+
+|ID|NAME|CREATED|UPDATED|
+|---|---|---|---|
+|xyz987xyz123|jwt_private_key|2 minutes ago|2 minutes ago|
+|abc123abc456|jwt_public_key|2 minutes ago|2 minutes ago|
+
+➍ **Deploy the Stack**
+
+Run:
+
+```bash
+docker stack deploy -c docker-compose.yml janux-stack
+```
+
+This will:
+
+- Deploy **JANUX Authentication Gateway**
+- Deploy **MongoDB** and **Redis** as dependencies
+- Ensure all services are properly networked
+
+➎ **Check If Services Are Running**
+
+Verify that all services are running with:
+
+```bash
+docker service ls
+```
+
+✅  *Expected Output:*
+
+|ID|NAME|MODE|REPLICAS|IMAGE|PORTS|
+|---|---|---|---|---|---|
+|xyz987xyz|janux-stack_janux-auth-gateway|replicated|1/1|janux-auth-gateway:latest|*:8000->8000/tcp|
+|uvw654uvw|janux-stack_mongodb|replicated|1/1|mongo:6.0||
+|abc321abc|janux-stack_redis|replicated|1/1|redis:latest||                
+
+???+ failure "FAILED"
+
+    🚨 If the janux-auth-gateway service is 0/1, check logs:
+
+    ```bash
+    docker service logs -f janux-stack_janux-auth-gateway
+    ```
+
+
+➏ **Test the API**
+
+Once all services are running, check the API health:
+
+```bash
+curl http://localhost:8000/health
+```
+
+✅ *Expected Output:*
+
+```json
+{"status": "healthy"}
+```
+
+➐ **Stop & Remove the Stack**
+
+If you need to stop the application, run:
+
+```bash
+docker stack rm janux-stack
+
+```
+
+---
+
+🤩 **CONGRAGULATIONS!** Continue to the **usage**. Let's keep going...🚀
 
   [JANUX-Auth-Gateway]: https://pypi.org/project/janux-auth-gateway/
   [GitHub]: https://github.com/fox-techniques/janux-auth-gateway

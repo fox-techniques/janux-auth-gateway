@@ -29,6 +29,7 @@ from janux_auth_gateway.config import Config
 from janux_auth_gateway.database.mongoDB import init_db
 from janux_auth_gateway.debug.custom_logger import get_logger
 
+import argparse
 
 logger = get_logger("auth_service_logger")
 
@@ -118,13 +119,23 @@ app.include_router(user_router, prefix="/users", tags=["Users"])
 
 
 # Entry point for running the app directly
-def main():
+def main(reload_mode=False):
     """Run the Uvicorn server"""
     import uvicorn
 
     logger.info("Running JANUX Authentication Gateway as a standalone application...")
-    uvicorn.run("janux_auth_gateway.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(
+        "janux_auth_gateway.main:app", host="0.0.0.0", port=8000, reload=reload_mode
+    )
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Run JANUX Authentication Gateway")
+    parser.add_argument(
+        "--reload",
+        action="store_true",
+        help="Enable auto-reload for development mode",
+    )
+    args = parser.parse_args()
+
+    main(reload_mode=args.reload)
