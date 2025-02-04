@@ -17,28 +17,22 @@ jobs:
   publish-to-gh-pages:
     name: Publish to GitHub Pages
     runs-on: ubuntu-latest
-    environment: release-with-approval
-
+    # environment: release-with-approval
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Extract version from Git tag
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v2
+      - uses: actions/checkout@v4
+      - name: Configure Git Credentials
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+      - uses: actions/setup-python@v5
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build Docker image
-        run: |
-          docker build -t ghcr.io/${{ github.repository_owner }}/janux-auth-gateway:${{ env.VERSION }} .
-          docker tag ghcr.io/${{ github.repository_owner }}/janux-auth-gateway:${{ env.VERSION }} ghcr.io/${{ github.repository_owner }}/janux-auth-gateway:latest
-
-      - name: Push Docker image
-        run: |
-          docker push ghcr.io/${{ github.repository_owner }}/janux-auth-gateway:${{ env.VERSION }}
-          docker push ghcr.io/${{ github.repository_owner }}/janux-auth-gateway:latest
+          python-version: 3.x
+      - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV 
+      - uses: actions/cache@v4
+        with:
+          key: mkdocs-material-${{ env.cache_id }}
+          path: .cache
+          restore-keys: |
+            mkdocs-material-
+      - run: pip install mkdocs-material 
+      - run: mkdocs gh-deploy --force --clean
