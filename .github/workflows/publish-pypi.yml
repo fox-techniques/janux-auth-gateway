@@ -106,6 +106,6 @@ jobs:
           path: dist/
 
       - name: Publish Distribution
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@76f52bc
         with:
           password: ${{ secrets.PYPI_TOKEN }}
