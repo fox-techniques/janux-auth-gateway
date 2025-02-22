@@ -29,12 +29,16 @@ from janux_auth_gateway.config import Config
 from janux_auth_gateway.database.mongoDB import init_db
 from janux_auth_gateway.debug.custom_logger import get_logger
 
+import os
 import argparse
 
 logger = get_logger("auth_service_logger")
 
 # Get allowed origins from Configuration
 origins = Config.ALLOWED_ORIGINS
+
+UVICORN_HOST = os.getenv("UVICORN_HOST")
+UVICORN_PORT = int(os.getenv("UVICORN_PORT"))
 
 
 @asynccontextmanager
@@ -125,7 +129,10 @@ def main(reload_mode=False):
 
     logger.info("Running JANUX Authentication Gateway as a standalone application...")
     uvicorn.run(
-        "janux_auth_gateway.main:app", host="0.0.0.0", port=8000, reload=reload_mode
+        "janux_auth_gateway.main:app",
+        host=UVICORN_HOST,
+        port=UVICORN_PORT,
+        reload=reload_mode,
     )
 
 
