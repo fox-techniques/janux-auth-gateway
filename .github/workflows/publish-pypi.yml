@@ -17,53 +17,27 @@ env:
   PACKAGE_NAME: janux-auth-gateway
 
 jobs:
-  extract-version:
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.extract_version.outputs.version }}
-    steps:
-      - name: 🛎 Checkout
-        uses: actions/checkout@v4
-
-      - name: 🐍 Extract version from pyproject.toml
-        id: extract_version
-        run: |
-          VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['tool']['poetry']['version'])")
-          echo "version=$VERSION"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: 🧪 Check if version exists on PyPI
-        run: |
-          PKG=${{ env.PACKAGE_NAME }}
-          VERSION=${{ steps.extract_version.outputs.version }}
-          if curl -sf https://pypi.org/pypi/$PKG/json | jq -e ".releases[\"$VERSION\"]"; then
-            echo "❌ Version $VERSION already exists on PyPI."
-            exit 1
-          fi
-          echo "✅ Version $VERSION is new."
-
   test:
     runs-on: ubuntu-latest
-    needs: extract-version
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
 
-      - name: 🐍 Setup Python ${{ matrix.python-version }}
+      - name: 🐍 Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: 📦 Install tox
+      - name: 🧪 Install test tools
         run: |
           python -m pip install --upgrade pip
           pip install tox
 
-      - name: 🧪 Run tests with tox
+      - name: 🔍 Run tests
         run: |
-          V=$(echo ${{ matrix.python-version }} | tr -d .)
+          V=$(echo "${{ matrix.python-version }}" | tr -d .)
           tox -e py$V
 
   build:
@@ -79,19 +53,19 @@ jobs:
         with:
           version: latest
 
-      - name: 🔧 Install dependencies
+      - name: 📥 Install dependencies
         run: poetry install --no-interaction --no-root
 
-      - name: 🏗 Build package
+      - name: 🏗 Build the package
         run: poetry build
 
-      - name: 📝 Set output version
+      - name: 📤 Set output version
         id: set
         run: |
           VERSION=$(poetry version -s)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: ⬆ Upload dist artifacts
+      - name: ☁️ Upload dist artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dist-${{ steps.set.outputs.version }}
@@ -102,10 +76,11 @@ jobs:
     needs: build
     environment: release-with-approval
     permissions:
-      id-token: write  # required for PyPI trusted publishing
+      id-token: write
       contents: read
     steps:
-      - uses: actions/download-artifact@v4
+      - name: 📥 Download dist
+        uses: actions/download-artifact@v4
         with:
           name: dist-${{ needs.build.outputs.version }}
           path: dist/
@@ -114,7 +89,6 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
 
   tag-release:
-    name: 📌 Tag & Release
     runs-on: ubuntu-latest
     needs: [publish, build]
     permissions:
@@ -124,7 +98,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 📌 Create tag
+      - name: 🏷 Tag release
         run: |
           VERSION=${{ needs.build.outputs.version }}
           git config user.name "github-actions[bot]"
@@ -132,7 +106,7 @@ jobs:
           git tag v$VERSION
           git push origin v$VERSION
 
-      - name: 📝 Create GitHub Release
+      - name: 📢 GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.build.outputs.version }}
