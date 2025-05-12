@@ -12,6 +12,7 @@ on:
       - "README.md"
       - "janux_auth_gateway/**"
       - "tests/**"
+  
 
 env:
   PACKAGE_NAME: janux-auth-gateway

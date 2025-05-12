@@ -4,15 +4,16 @@ main.py
 Entry point for the JANUX Authentication Gateway.
 
 This file initializes the FastAPI app, sets up middleware, exception handlers,
-routes, and establishes the MongoDB connection using Beanie.
+routes, and establishes the MongoDB/PostgreSQL connection using Beanie.
 
 Features:
 - Middleware for request logging and correlation IDs.
 - Centralized error handling for consistent API responses.
 - Modular route inclusion for base, auth, user, and admin APIs.
-- MongoDB initialization with Beanie ODM.
+- MongoDB/PostgreSQL initialization.
 
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
+
 """
 
 from fastapi import FastAPI

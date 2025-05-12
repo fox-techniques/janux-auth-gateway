@@ -133,7 +133,6 @@ or for PostgreSQL backend:
 ./setup_docker_secret.sh postgres
 ```
 
-
 Prior to the deployment, this script will populate **Docker secrets** in `/run/secrets/` by reading from local files.
 
 
