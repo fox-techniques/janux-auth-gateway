@@ -9,8 +9,8 @@ Endpoints:
 Features:
 - Validates user and admin credentials securely.
 - Issues JWT tokens with appropriate roles and expiration.
-- Detailed logging for authentication operations.
 - Prevents brute-force attacks with rate limiting.
+- Dynamically uses MongoDB or PostgreSQL authentication based on configuration.
 
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
@@ -22,16 +22,27 @@ from starlette import status
 import redis
 
 from janux_auth_gateway.auth.jwt import create_access_token
-from janux_auth_gateway.database.mongoDB import authenticate_user, authenticate_admin
 from janux_auth_gateway.config import Config
 from janux_auth_gateway.schemas.token_schema import Token
-from janux_auth_gateway.debug.custom_logger import get_logger
+from hestia_logger import get_logger
+
+# Select authentication functions based on backend
+if Config.AUTH_DB_BACKEND == "mongo":
+    from janux_auth_gateway.database.mongoDB import (
+        authenticate_user,
+        authenticate_admin,
+    )
+elif Config.AUTH_DB_BACKEND == "postgres":
+    from janux_auth_gateway.database.postgreSQL import (
+        authenticate_user_postgres as authenticate_user,
+        authenticate_admin_postgres as authenticate_admin,
+    )
 
 # Initialize logger
 logger = get_logger("auth_service_logger")
 
 # Redis instance for rate-limiting login attempts
-redis_client = redis.Redis(host="localhost", port=6379, db=0)
+redis_client = redis.Redis(host=Config.REDIS_HOST, port=Config.REDIS_PORT, db=0)
 
 # Initialize router
 auth_router = APIRouter()
@@ -49,9 +60,7 @@ def is_rate_limited(email: str) -> bool:
     """
     attempts_key = f"login_attempts:{email}"
     attempts = redis_client.get(attempts_key)
-    if attempts and int(attempts) >= 5:
-        return True
-    return False
+    return bool(attempts and int(attempts) >= 5)
 
 
 def record_failed_attempt(email: str):
@@ -99,9 +108,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     logger.info(f"Login attempt for email: {email}")
 
     if is_rate_limited(email):
-        logger.warning(
-            f"Login blocked for email: {email} due to too many failed attempts."
-        )
+        logger.warning(f"Rate limit triggered for email: {email}")
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many login attempts. Please try again later.",

@@ -15,6 +15,7 @@ Features:
 - Implements rate-limiting to prevent excessive API calls.
 - Logs detailed admin actions for audit and security.
 - Documents 401 Unauthorized responses for unauthorized access.
+- Dynamically selects database backend (MongoDB or PostgreSQL).
 
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
@@ -25,21 +26,27 @@ from typing import Annotated, List
 import redis
 
 from janux_auth_gateway.config import Config
-from janux_auth_gateway.schemas.user_schema import UserResponse
 from janux_auth_gateway.auth.jwt import get_current_admin
-from janux_auth_gateway.models.user_model import User
-from janux_auth_gateway.debug.custom_logger import get_logger
 from janux_auth_gateway.schemas.response_schema import UnauthorizedResponse
+from hestia_logger import get_logger
+
+# Select correct schema based on backend
+if Config.AUTH_DB_BACKEND == "mongo":
+    from janux_auth_gateway.schemas.user_schema_mongo import (
+        UserResponseMongo as UserResponse,
+    )
+    from janux_auth_gateway.models.mongoDB.user_model import User
+elif Config.AUTH_DB_BACKEND == "postgres":
+    from janux_auth_gateway.schemas.user_schema_postgres import (
+        UserResponsePostgres as UserResponse,
+    )
+    from janux_auth_gateway.models.postgreSQL.user_model import User
 
 # Initialize logger
 logger = get_logger("auth_service_logger")
 
-# Constants
-REDIS_HOST = Config.REDIS_HOST
-REDIS_PORT = Config.REDIS_PORT
-
-# Redis instance for rate-limiting user actions
-redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
+# Redis instance for rate-limiting (if needed)
+redis_client = redis.Redis(host=Config.REDIS_HOST, port=Config.REDIS_PORT, db=0)
 
 # Admin OAuth2 dependency
 AdminDependency = Annotated[dict, Depends(get_current_admin)]
@@ -57,24 +64,43 @@ admin_router = APIRouter()
 )
 async def list_users(current_admin: AdminDependency):
     """
-    Admin-only route to list all users.
+    Admin-only route to list all users in the system.
 
     Args:
-        current_admin (dict): The currently authenticated admin user.
+        current_admin (dict): The authenticated admin user.
 
     Returns:
-        List[UserResponse]: A list of all registered users.
+        List[UserResponse]: A list of users with limited public fields.
 
     Raises:
-        HTTPException: If unauthorized (401) or an unexpected error occurs.
+        HTTPException: On internal error.
     """
     try:
         logger.info(f"Admin endpoint accessed by: {current_admin['username']}")
-        users = await User.find_all().to_list()
-        return [
-            UserResponse(id=str(user.id), email=user.email, full_name=user.full_name)
-            for user in users
-        ]
+
+        if Config.AUTH_DB_BACKEND == "mongo":
+            users = await User.find_all().to_list()
+            return [
+                UserResponse(
+                    id=str(user.id), email=user.email, full_name=user.full_name
+                )
+                for user in users
+            ]
+        else:
+            from sqlalchemy.future import select
+            from janux_auth_gateway.database.postgreSQL import AsyncSessionLocal
+
+            async with AsyncSessionLocal() as session:
+                result = await session.execute(select(User))
+                users = result.scalars().all()
+
+            return [
+                UserResponse(
+                    id=str(user.id), username=user.username, full_name=user.full_name
+                )
+                for user in users
+            ]
+
     except Exception as e:
         logger.error(f"Error listing users: {e}")
         raise HTTPException(
@@ -92,18 +118,47 @@ async def list_users(current_admin: AdminDependency):
 async def delete_user(user_id: str, current_admin: AdminDependency):
     """
     Admin-only route to delete a user by ID.
+
+    Args:
+        user_id (str): The ID of the user to be deleted.
+        current_admin (dict): The authenticated admin user.
+
+    Returns:
+        dict: Confirmation message upon success.
+
+    Raises:
+        HTTPException: If the user does not exist or deletion fails.
     """
     try:
         logger.info(
-            f"Admin deletion endpoint accessed by: {current_admin['username']} for user ID: {user_id}"
+            f"Admin deletion by {current_admin['username']} for user ID: {user_id}"
         )
-        user = await User.get(user_id)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="User not found."
-            )
-        await user.delete()
+
+        if Config.AUTH_DB_BACKEND == "mongo":
+            user = await User.get(user_id)
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND, detail="User not found."
+                )
+            await user.delete()
+        else:
+            from sqlalchemy.future import select
+            from janux_auth_gateway.database.postgreSQL import AsyncSessionLocal
+
+            async with AsyncSessionLocal() as session:
+                result = await session.execute(select(User).where(User.id == user_id))
+                user = result.scalar_one_or_none()
+                if not user:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND, detail="User not found."
+                    )
+                await session.delete(user)
+                await session.commit()
+
         return {"message": f"User ID {user_id} successfully deleted."}
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error deleting user: {e}")
         raise HTTPException(
@@ -121,6 +176,12 @@ async def delete_user(user_id: str, current_admin: AdminDependency):
 async def get_profile(current_admin: AdminDependency):
     """
     Returns the profile of the currently logged-in admin.
+
+    Args:
+        current_admin (dict): The currently authenticated admin user.
+
+    Returns:
+        dict: A message and the admin profile.
     """
     return {"message": "This is your admin profile", "admin": current_admin}
 
@@ -134,6 +195,12 @@ async def get_profile(current_admin: AdminDependency):
 async def logout(current_admin: AdminDependency):
     """
     Logs out the currently authenticated admin.
+
+    Args:
+        current_admin (dict): The currently authenticated admin user.
+
+    Returns:
+        dict: A message confirming logout.
     """
     logger.info(f"Logout endpoint accessed for admin: {current_admin['username']}")
     return {"message": "You have been logged out successfully."}

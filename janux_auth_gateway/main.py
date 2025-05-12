@@ -19,15 +19,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from janux_auth_gateway.errors.handlers import register_error_handlers
-from janux_auth_gateway.debug.requests import log_requests
-from janux_auth_gateway.debug.middleware import add_request_id
 from janux_auth_gateway.routers.base_router import base_router
 from janux_auth_gateway.routers.user_router import user_router
 from janux_auth_gateway.routers.admin_router import admin_router
 from janux_auth_gateway.routers.auth_router import auth_router
 from janux_auth_gateway.config import Config
-from janux_auth_gateway.database.mongoDB import init_db
-from janux_auth_gateway.debug.custom_logger import get_logger
+
+from hestia_logger import get_logger
+from hestia_logger.middlewares import setup_logging_middleware
 
 import os
 import argparse
@@ -36,9 +35,6 @@ logger = get_logger("auth_service_logger")
 
 # Get allowed origins from Configuration
 origins = Config.ALLOWED_ORIGINS
-
-UVICORN_HOST = os.getenv("UVICORN_HOST")
-UVICORN_PORT = int(os.getenv("UVICORN_PORT"))
 
 
 @asynccontextmanager
@@ -66,9 +62,21 @@ async def lifespan(app: FastAPI):
         logger.info(f"Running in environment: {environment}")
         logger.info(f"Detected containerized environment: {is_container}")
 
-        # Initialize MongoDB connection
-        logger.info("Initializing database connection...")
-        await init_db()
+        if Config.AUTH_DB_BACKEND == "mongo":
+            # Initialize MongoDB connection
+            logger.info("Initializing MongoDB connection...")
+
+            from janux_auth_gateway.database.mongoDB import init_db
+
+            await init_db()
+        elif Config.AUTH_DB_BACKEND == "postgres":
+            # Initialize PostgreSQL connection
+            logger.info("Initializing PostgreSQL connection...")
+            from janux_auth_gateway.database.postgreSQL import init_db_postgres
+
+            await init_db_postgres()
+        else:
+            raise ValueError("Invalid AUTH_DB_BACKEND")
 
         yield  # Application is running
 
@@ -109,9 +117,6 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
-app.middleware("http")(log_requests)
-app.middleware("http")(add_request_id)
-
 # Register exception handlers
 register_error_handlers(app)
 
@@ -130,8 +135,8 @@ def main(reload_mode=False):
     logger.info("Running JANUX Authentication Gateway as a standalone application...")
     uvicorn.run(
         "janux_auth_gateway.main:app",
-        host=UVICORN_HOST,
-        port=UVICORN_PORT,
+        host=Config.UVICORN_HOST,
+        port=Config.UVICORN_PORT,
         reload=reload_mode,
     )
 

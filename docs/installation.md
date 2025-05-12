@@ -94,7 +94,7 @@ pip install -e .
 
 **JANUX** can be run as a Standalone Docker Container with MongoDB & Redis.
 
-➊ Check If **MongoDB & Redis** Are Already Running
+➊ Check If **MongoDB/PostgreSQL & Redis** Are Already Running
 
 Before running **JANUX**, ensure MongoDB and Redis are running.
 
@@ -111,9 +111,10 @@ docker ps
 
 ???+ failure "FAILED"
 
-    🚨 If **MongoDB or Redis** is missing, start them manually:
+    🚨 If **MongoDB/PostgreSQL or Redis** is missing, start them manually:
 
     ```bash
+    docker run -d --name mongodb -p 27017:27017 mongo:latest
     docker run -d --name mongodb -p 27017:27017 mongo:latest
     docker run -d --name redis -p 6379:6379 redis:latest
     ```
@@ -178,7 +179,7 @@ docker run -p 8000:8000 \
 
 ---
 
-## 🚢 Docker Swarm (RECOMMENEDED)
+## 🚢 Docker Swarm (RECOMMENEDED) - MongoDB
 
 Secrets ensure sensitive information (like private keys and database credentials) is securely stored. For multi-container setups including **MongoDB** and **Redis**: 
 
@@ -200,34 +201,17 @@ chmod +x ./setup_docker_secret.sh
 Next, to create secrets, run the following command in the terminal:
 
 ```bash
-./setup_docker_secret.sh
+./setup_docker_secret.sh mongo
 ```
 
-This script will:
 
-- Check if Docker Swarm is initialized
-- Create/update required secrets for authentication and database access
-
-➌ **Verify Secrets**
-
-```bash
-docker secret ls
-```
-
-✅ *Expected Output:*
-
-
-|ID|NAME|CREATED|UPDATED|
-|---|---|---|---|
-|xyz987xyz123|jwt_private_key|2 minutes ago|2 minutes ago|
-|abc123abc456|jwt_public_key|2 minutes ago|2 minutes ago|
-
-➍ **Deploy the Stack**
+➌ **Deploy the Stack**
 
 Run:
 
 ```bash
-docker stack deploy -c docker-compose.yml janux-stack
+./deploy_janux_stack.sh docker-compose.mongo.yml
+
 ```
 
 This will:
@@ -244,21 +228,80 @@ Verify that all services are running with:
 docker service ls
 ```
 
-✅  *Expected Output:*
 
-|ID|NAME|MODE|REPLICAS|IMAGE|PORTS|
-|---|---|---|---|---|---|
-|xyz987xyz|janux-stack_janux-auth-gateway|replicated|1/1|janux-auth-gateway:latest|*:8000->8000/tcp|
-|uvw654uvw|janux-stack_mongodb|replicated|1/1|mongo:6.0||
-|abc321abc|janux-stack_redis|replicated|1/1|redis:latest||                
+➏ **Test the API**
 
-???+ failure "FAILED"
+Once all services are running, check the API health:
 
-    🚨 If the janux-auth-gateway service is 0/1, check logs:
+```bash
+curl http://localhost:8000/health
+```
 
-    ```bash
-    docker service logs -f janux-stack_janux-auth-gateway
-    ```
+✅ *Expected Output:*
+
+```json
+{"status": "healthy"}
+```
+
+➐ **Stop & Remove the Stack**
+
+If you need to stop the application, run:
+
+```bash
+docker stack rm janux-stack
+
+```
+
+---
+
+## 🚢 Docker Swarm (RECOMMENEDED) - PostgreSQL
+
+Secrets ensure sensitive information (like private keys and database credentials) is securely stored. For multi-container setups including **PostgreSQL** and **Redis**: 
+
+!!! danger "ATTENTION"
+
+    Make sure you have **JANUX** configured with `.env`. If not, please go to the section [configuration](configuration.md).
+
+
+➊ **Grant permissions**
+
+First, first make sure permissions are set by running the following command in the terminal:
+
+```bash
+chmod +x ./setup_docker_secret.sh
+```
+
+➋ **Configure Docker Secrets**
+
+Next, to create secrets, run the following command in the terminal:
+
+```bash
+./setup_docker_secret.sh postgres
+```
+
+
+➌ **Deploy the Stack**
+
+Run:
+
+```bash
+./deploy_janux_stack.sh docker-compose.postgres.yml
+
+```
+
+This will:
+
+- Deploy **JANUX Authentication Gateway**
+- Deploy **PostgreSQL** and **Redis** as dependencies
+- Ensure all services are properly networked
+
+➎ **Check If Services Are Running**
+
+Verify that all services are running with:
+
+```bash
+docker service ls
+```
 
 
 ➏ **Test the API**

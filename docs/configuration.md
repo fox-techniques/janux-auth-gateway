@@ -7,8 +7,6 @@
 
 For non-sensitive settings, **JANUX** loads configuration from a `.env` file or system environment variables. The following default `.env.example` file is provided for local development. 
 
-Create a `.env` file in the project root:
-
 ```bash title=".env"
 # ========================
 # 🌍 Environment Settings
@@ -17,12 +15,15 @@ ENVIRONMENT=local
 ALLOWED_ORIGINS="*"
 
 # ========================
+# ⚙️ Backend Configuration
+# ========================
+# Supported values: mongo, postgres
+AUTH_DB_BACKEND=mongo
+
+# ========================
 # 🔐 Authentication (JWT)
 # ========================
-# Token expiration time
 ACCESS_TOKEN_EXPIRE_MINUTES=20
-
-# Token issuer and audience
 TOKEN_ISSUER=JANUX-server
 TOKEN_AUDIENCE=JANUX-application
 
@@ -33,15 +34,29 @@ USER_TOKEN_URL=/auth/login
 ADMIN_TOKEN_URL=/auth/login
 
 # ========================
-# 🗄️ Database Configuration
+# 🌱 MongoDB Configuration
 # ========================
 MONGO_DATABASE_NAME=users_db
+
+# ========================
+# 🐘 PostgreSQL Configuration
+# ========================
+POSTGRES_DATABASE_NAME=users_db
+POSTGRES_ECHO=false
+POSTGRES_POOL_SIZE=5
 
 # ========================
 # 🇷 REDIS Configuration
 # ========================
 REDIS_HOST=redis
 REDIS_PORT=6379
+
+# ========================
+# 🦄 Uvicorn Configuration
+# ========================
+UVICORN_HOST=0.0.0.0
+UVICORN_PORT=8000
+
 ```
 
 To use this configuration, copy `.env.example` to `.env`, and modify the values as needed.
@@ -69,6 +84,8 @@ The expected structure for secrets in local development mimics Docker secrets:
 ├── janux_encryption_key
 ├── jwt_private_key.pem
 ├── jwt_public_key.pem
+
+# MongoDB (used if AUTH_DB_BACKEND=mongo)
 ├── mongo_uri
 ├── mongo_admin_email
 ├── mongo_admin_password
@@ -78,11 +95,19 @@ The expected structure for secrets in local development mimics Docker secrets:
 ├── mongo_user_password
 ├── mongo_user_fullname
 └── mongo_user_role
-```
 
-!!! example "Content" 
-    
-    Each secret file contains **only the value of the secret, without quotes or extra characters.**
+# PostgreSQL (used if AUTH_DB_BACKEND=postgres)
+├── postgres_uri
+├── postgres_admin_username
+├── postgres_admin_password
+├── postgres_admin_fullname
+├── postgres_admin_role
+├── postgres_user_username
+├── postgres_user_password
+├── postgres_user_fullname
+└── postgres_user_role
+
+```
 
 
 ## 🕵️‍♂️ Setting Up Docker Secrets
@@ -96,11 +121,18 @@ If running with Docker Compose, **JANUX** automatically loads secrets from `/run
 chmod +x ./setup_docker_secret.sh
 ```
 
-➋ Next, to create these secrets, run the following command in the terminal:
+➋ Next, to create these secrets, run the following command in the terminal for MongoDB backend:
 
 ```bash
-./setup_docker_secret.sh
+./setup_docker_secret.sh mongo
 ```
+
+or for PostgreSQL backend: 
+
+```bash
+./setup_docker_secret.sh postgres
+```
+
 
 Prior to the deployment, this script will populate **Docker secrets** in `/run/secrets/` by reading from local files.
 

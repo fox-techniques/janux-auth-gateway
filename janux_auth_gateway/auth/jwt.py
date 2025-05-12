@@ -1,22 +1,20 @@
 """
 jwt.py
 
-This module handles JSON Web Token (JWT) creation, validation, and user authentication.
+This module handles JSON Web Token (JWT) creation, validation, user authentication, and token revocation.
 
 Features:
-- Token creation with expiration and optional unique identifiers (jti).
-- Validation and decoding of tokens to retrieve current user information.
-- Environment variable integration for private and public keys.
-- Implements refresh tokens for automatic re-authentication.
-- Supports token revocation (blacklisting) for secure logout.
-
-Replaced python-jose with PyJWT for enhanced security.
+- JWT access and refresh token generation with expiration.
+- Token decoding and verification including revocation checks.
+- Dependency-safe Redis client for blacklist token management.
+- FastAPI-compatible user and admin extraction from tokens.
 
 Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
 import jwt
 import redis
+from functools import lru_cache
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime, timedelta, timezone
@@ -24,7 +22,7 @@ from starlette import status
 from typing import Optional, Dict, Any
 
 from janux_auth_gateway.config import Config
-from janux_auth_gateway.debug.custom_logger import get_logger
+from hestia_logger import get_logger
 
 # Initialize logger
 logger = get_logger("auth_service_logger")
@@ -32,25 +30,36 @@ logger = get_logger("auth_service_logger")
 # Constants
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 
-# Redis instance for token blacklisting
-blacklist = redis.Redis(host=Config.REDIS_HOST, port=Config.REDIS_PORT, db=0)
-
 # OAuth2 Bearer configuration
 user_oauth2_bearer = OAuth2PasswordBearer(tokenUrl=Config.ADMIN_TOKEN_URL)
 admin_oauth2_bearer = OAuth2PasswordBearer(tokenUrl=Config.USER_TOKEN_URL)
 
 
-def _create_jwt(data: Dict[str, Any], expires_delta: timedelta, key: str) -> str:
+@lru_cache()
+def get_redis_client() -> redis.Redis:
     """
-    Helper function to create a JWT token.
+    Creates and returns a cached Redis client instance for token blacklisting.
 
-    Args:
-        data (Dict[str, Any]): The payload data for the token.
-        expires_delta (timedelta): The duration for which the token remains valid.
-        key (str): The private key used to sign the token.
+    This function is dependency-injection safe for FastAPI and avoids deepcopy issues
+    with thread-locked objects like Redis connections.
 
     Returns:
-        str: The encoded JWT token.
+        redis.Redis: An active Redis client instance.
+    """
+    return redis.Redis(host=Config.REDIS_HOST, port=Config.REDIS_PORT, db=0)
+
+
+def _create_jwt(data: Dict[str, Any], expires_delta: timedelta, key: str) -> str:
+    """
+    Internal helper to create a JWT with expiry, issuer, audience, and issued-at timestamp.
+
+    Args:
+        data (Dict[str, Any]): Payload to encode into the JWT.
+        expires_delta (timedelta): Token lifespan.
+        key (str): Private key used to sign the token.
+
+    Returns:
+        str: Encoded JWT token.
     """
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + expires_delta
@@ -69,14 +78,14 @@ def create_access_token(
     data: Dict[str, Any], expires_delta: Optional[timedelta] = None
 ) -> str:
     """
-    Creates a JWT access token with optional expiration.
+    Creates a signed JWT access token for user or admin authentication.
 
     Args:
-        data (Dict[str, Any]): The payload data to include in the token.
-        expires_delta (Optional[timedelta]): The token expiration period.
+        data (Dict[str, Any]): Token payload (e.g. {"sub": email, "role": "user"}).
+        expires_delta (Optional[timedelta]): Expiration window. Defaults to configured minutes.
 
     Returns:
-        str: A signed JWT access token.
+        str: Signed access token as a JWT string.
     """
     expires = expires_delta or timedelta(minutes=Config.ACCESS_TOKEN_EXPIRE_MINUTES)
     return _create_jwt(data, expires, Config.JWT_PRIVATE_KEY)
@@ -84,13 +93,15 @@ def create_access_token(
 
 def create_refresh_token(data: Dict[str, Any]) -> str:
     """
-    Creates a long-lived refresh token for session continuity.
+    Creates a long-lived JWT refresh token.
+
+    Adds a `"type": "refresh"` field to distinguish from access tokens.
 
     Args:
-        data (Dict[str, Any]): The payload data to include in the token.
+        data (Dict[str, Any]): Token payload.
 
     Returns:
-        str: A signed JWT refresh token.
+        str: Signed refresh token as a JWT string.
     """
     data["type"] = "refresh"
     return _create_jwt(
@@ -98,21 +109,21 @@ def create_refresh_token(data: Dict[str, Any]) -> str:
     )
 
 
-def verify_jwt(token: str, redis_client=blacklist) -> Dict[str, Any]:
+def verify_jwt(token: str, redis_client: redis.Redis) -> Dict[str, Any]:
     """
-    Verifies a JWT token, ensuring issuer and audience match, and checks if the token is revoked.
+    Verifies and decodes a JWT token, checking expiration, issuer, audience, and blacklist.
 
     Args:
-        token (str): The JWT token to be verified.
-        redis_client (redis.Redis): Redis instance (default is the real Redis server).
+        token (str): Encoded JWT token.
+        redis_client (redis.Redis): Redis client for blacklist check.
 
     Returns:
-        Dict[str, Any]: The decoded JWT payload if valid.
+        Dict[str, Any]: Decoded token payload.
 
     Raises:
-        HTTPException: If the token is expired, invalid, or revoked.
+        HTTPException: If token is revoked, expired, or invalid.
     """
-    if redis_client.get(token.encode()):  # Check if token is blacklisted
+    if redis_client.get(token.encode()):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Token revoked."
         )
@@ -137,20 +148,20 @@ def verify_jwt(token: str, redis_client=blacklist) -> Dict[str, Any]:
 
 def get_current_user(
     token: str = Depends(user_oauth2_bearer),
-    redis_client=blacklist,
+    redis_client: redis.Redis = Depends(get_redis_client),
 ) -> Dict[str, Any]:
     """
-    Retrieves the current user's details from the JWT token.
+    FastAPI dependency to extract and validate the currently logged-in user.
 
     Args:
-        token (str): The JWT token provided by the user.
-        redis_client (redis.Redis): Redis instance. Defaults to the real Redis server
+        token (str): JWT access token.
+        redis_client (redis.Redis): Redis client for blacklist check.
 
     Returns:
-        Dict[str, Any]: The decoded user information.
+        Dict[str, Any]: Token payload containing username and role.
 
     Raises:
-        HTTPException: If the user role is invalid.
+        HTTPException: If role is not 'user' or token is invalid.
     """
     payload = verify_jwt(token, redis_client=redis_client)
 
@@ -164,20 +175,20 @@ def get_current_user(
 
 def get_current_admin(
     token: str = Depends(admin_oauth2_bearer),
-    redis_client=blacklist,
+    redis_client: redis.Redis = Depends(get_redis_client),
 ) -> Dict[str, Any]:
     """
-    Retrieves the current admin's details from the JWT token.
+    FastAPI dependency to extract and validate the currently logged-in admin.
 
     Args:
-        token (str): The JWT token provided by the admin.
-        redis_client (redis.Redis): Redis instance. Defaults to the real Redis server
+        token (str): JWT access token.
+        redis_client (redis.Redis): Redis client for blacklist check.
 
     Returns:
-        Dict[str, Any]: The decoded admin information.
+        Dict[str, Any]: Token payload containing admin's username and role.
 
     Raises:
-        HTTPException: If the admin role is invalid.
+        HTTPException: If role is not 'admin' or token is invalid.
     """
     payload = verify_jwt(token, redis_client=redis_client)
 
@@ -189,13 +200,15 @@ def get_current_admin(
     return {"username": payload["sub"], "role": payload["role"]}
 
 
-def revoke_token(token: str, redis_client=blacklist):
+def revoke_token(
+    token: str, redis_client: redis.Redis = Depends(get_redis_client)
+) -> None:
     """
-    Revokes a given token by adding it to the blacklist.
+    Adds the token to the Redis blacklist, effectively revoking it until it expires.
 
     Args:
-        token (str): The JWT token to be revoked.
-        redis_client (redis.Redis): Redis instance (default is the real Redis server).
+        token (str): JWT access token to revoke.
+        redis_client (redis.Redis): Redis client instance.
 
     Returns:
         None

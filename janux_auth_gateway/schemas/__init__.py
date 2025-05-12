@@ -16,15 +16,30 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
 from .token_schema import Token
-from .user_schema import UserBase, UserCreate, UserResponse, UserLogin
+from .user_schema_mongo import (
+    UserBaseMongo,
+    UserCreateMongo,
+    UserResponseMongo,
+    UserLoginMongo,
+)
+from .user_schema_postgres import (
+    UserBasePostgres,
+    UserCreatePostgres,
+    UserResponsePostgres,
+    UserLoginPostgres,
+)
 from .response_schema import ConflictResponse, ErrorResponse
 
 __all__ = [
     "Token",
-    "UserBase",
-    "UserCreate",
-    "UserResponse",
-    "UserLogin",
+    "UserBaseMongo",
+    "UserCreateMongo",
+    "UserResponseMongo",
+    "UserLoginMongo",
+    "UserBasePostgres",
+    "UserCreatePostgres",
+    "UserResponsePostgres",
+    "UserLoginPostgres",
     "ConflictResponse",
     "ErrorResponse",
 ]

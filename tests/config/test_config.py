@@ -140,9 +140,7 @@ def test_config_validation_failure_invalid_mongo_uri(mocker):
     """
     mocker.patch.object(Config, "MONGO_URI", "")
 
-    with pytest.raises(
-        ValueError, match="Missing `mongo_uri` for database connection."
-    ):
+    with pytest.raises(ValueError, match="Missing `mongo_uri`"):
         Config.validate()
 
 

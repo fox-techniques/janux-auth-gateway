@@ -13,7 +13,7 @@ title: JANUX Authentication Gateway
 [![GitHub](https://img.shields.io/badge/GitHub-janux--auth--gateway-181717?logo=github)](https://github.com/fox-techniques/janux-auth-gateway)
 
 
-**JANUX Authentication Gateway** is a high-performance, modular, and extensible authentication microservice built with **FastAPI**. It provides secure user and admin authentication, JWT management, and seamless MongoDB integration via Beanie ODM. Designed for developers and organizations, JANUX ensures scalability, flexibility, and security—making it ideal for **SaaS platforms, APIs, and enterprise applications** that require a robust authentication system.
+**JANUX Authentication Gateway** is a high-performance, modular, and extensible authentication microservice built with **FastAPI**. It provides secure user and admin authentication, JWT management, and seamless MongoDB integration via Beanie ODM and PostgreSQL via SQLAlchemy. Designed for developers and organizations, JANUX ensures scalability, flexibility, and security—making it ideal for **SaaS platforms, APIs, and enterprise applications** that require a robust authentication system.
 
 ## 🌟 Key Features
 
@@ -38,7 +38,7 @@ title: JANUX Authentication Gateway
 - ✅ A ready-to-use authentication system **for APIs and SaaS apps**.
 - ✅ A secure and scalable solution with **RBAC & JWT**.
 - ✅ Flexibility to extend authentication workflows.
-- ✅ Modern authentication standards with **FastAPI, MongoDB, and Redis**.
+- ✅ Modern authentication standards with **FastAPI, PostgresSQL, MongoDB, and Redis**.
 
 
 ---

@@ -19,7 +19,7 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
 
 
-class UserBase(BaseModel):
+class UserBaseMongo(BaseModel):
     """
     Base schema for user details.
 
@@ -34,7 +34,7 @@ class UserBase(BaseModel):
     )
 
 
-class UserCreate(UserBase):
+class UserCreateMongo(UserBaseMongo):
     """
     Schema for user registration.
 
@@ -77,7 +77,7 @@ class UserCreate(UserBase):
     )
 
 
-class UserResponse(UserBase):
+class UserResponseMongo(UserBaseMongo):
     """
     Schema for user response data.
 
@@ -101,7 +101,7 @@ class UserResponse(UserBase):
     )
 
 
-class UserLogin(BaseModel):
+class UserLoginMongo(BaseModel):
     """
     Schema for user login credentials.
 

@@ -20,7 +20,7 @@ import redis
 from passlib.context import CryptContext
 from fastapi import HTTPException
 from janux_auth_gateway.config import Config
-from janux_auth_gateway.debug.custom_logger import get_logger
+from hestia_logger import get_logger
 
 # Initialize logger
 logger = get_logger("auth_service_logger")

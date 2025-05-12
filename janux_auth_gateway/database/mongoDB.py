@@ -19,9 +19,9 @@ from typing import Optional
 
 from janux_auth_gateway.auth.passwords import verify_password, hash_password
 from janux_auth_gateway.config import Config
-from janux_auth_gateway.debug.custom_logger import get_logger
-from janux_auth_gateway.models.user_model import User
-from janux_auth_gateway.models.admin_model import Admin
+from hestia_logger import get_logger
+from janux_auth_gateway.models.mongoDB.user_model import User
+from janux_auth_gateway.models.mongoDB.admin_model import Admin
 
 # Initialize logger
 logger = get_logger("auth_service_logger")
@@ -45,6 +45,7 @@ async def init_db(
         SystemExit: If the MongoDB server is not reachable or authentication fails.
     """
     try:
+        logger.info(f"mongo URI {Config.MONGO_URI}")
         if test_db is not None:
             # Use test database and its values
             client = AsyncIOMotorClient(test_db_uri) if test_db_uri else test_db.client

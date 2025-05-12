@@ -22,7 +22,7 @@ from fastapi.exceptions import RequestValidationError
 from starlette import status
 import traceback
 from janux_auth_gateway.config import Config
-from janux_auth_gateway.debug.custom_logger import get_logger
+from hestia_logger import get_logger
 from janux_auth_gateway.errors.exceptions import (
     AuthenticationError,
     ValidationError,

@@ -12,7 +12,7 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 """
 
 import pytest
-from janux_auth_gateway.models.roles_model import (
+from janux_auth_gateway.models.mongoDB.roles_model import (
     AdminRole,
     UserRole,
     VALID_ADMIN_ROLES,

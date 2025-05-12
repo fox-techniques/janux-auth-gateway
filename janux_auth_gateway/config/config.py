@@ -5,6 +5,8 @@ Central configuration module for the JANUX Authentication Gateway.
 
 Features:
 - Dynamically loads environment variables based on the specified environment.
+- Supports switching between backends via AUTH_DB_BACKEND.
+- Secure loading of secrets for both MongoDB and PostgreSQL.
 - Provides validation for critical environment variables.
 - Ensures secure handling of secrets and configuration settings.
 
@@ -127,7 +129,15 @@ class Config:
     USER_TOKEN_URL = _get_env_variable("USER_TOKEN_URL", "/auth/login")
     ADMIN_TOKEN_URL = _get_env_variable("ADMIN_TOKEN_URL", "/auth/login")
 
-    # 🛢️ Database (MongoDB)
+    # 💾 Backend Switch: "mongo" or "postgres"
+    AUTH_DB_BACKEND = _get_env_variable("AUTH_DB_BACKEND", "mongo").lower()
+    assert AUTH_DB_BACKEND in [
+        "mongo",
+        "postgres",
+    ], "AUTH_DB_BACKEND must be 'mongo' or 'postgres'"
+
+    # ---
+    # 🌱 MongoDB
     MONGO_URI = _read_secret("mongo_uri")
     MONGO_DATABASE_NAME = _get_env_variable("MONGO_DATABASE_NAME", "users_db")
 
@@ -143,9 +153,32 @@ class Config:
     MONGO_USER_FULLNAME = _read_secret("mongo_user_fullname")
     MONGO_USER_ROLE = _read_secret("mongo_user_role")
 
+    # ---
+    # 🐘 PostgreSQL
+    POSTGRES_URI = _read_secret("postgres_uri")
+    POSTGRES_DATABASE_NAME = _get_env_variable("POSTGRES_DATABASE_NAME", "users_db")
+    POSTGRES_ECHO = bool(_get_env_variable("POSTGRES_ECHO", False))
+    POSTGRES_POOL_SIZE = int(_get_env_variable("POSTGRES_POOL_SIZE", 5))
+
+    # 👤 PostgreSQL Initial Admin Credentials
+    POSTGRES_ADMIN_USERNAME = _read_secret("postgres_admin_username")
+    POSTGRES_ADMIN_PASSWORD = _read_secret("postgres_admin_password")
+    POSTGRES_ADMIN_FULLNAME = _read_secret("postgres_admin_fullname")
+    POSTGRES_ADMIN_ROLE = _read_secret("postgres_admin_role")
+
+    # 👤 PostgreSQL Initial User Credentials
+    POSTGRES_USER_USERNAME = _read_secret("postgres_user_username")
+    POSTGRES_USER_PASSWORD = _read_secret("postgres_user_password")
+    POSTGRES_USER_FULLNAME = _read_secret("postgres_user_fullname")
+    POSTGRES_USER_ROLE = _read_secret("postgres_user_role")
+
     # 🔄 Redis Configuration
     REDIS_HOST = _get_env_variable("REDIS_HOST", "localhost")
     REDIS_PORT = int(_get_env_variable("REDIS_PORT", "6379"))
+
+    # 🦄 Uvicorn Configuration
+    UVICORN_HOST = os.getenv("UVICORN_HOST", "0.0.0.0")
+    UVICORN_PORT = int(os.getenv("UVICORN_PORT", 8000))
 
     @staticmethod
     def validate():
@@ -162,12 +195,22 @@ class Config:
             raise ValueError("Invalid or missing `jwt_private_key` for signing JWTs.")
         if not Config.JWT_PUBLIC_KEY or "BEGIN PUBLIC KEY" not in Config.JWT_PUBLIC_KEY:
             raise ValueError("Invalid or missing `jwt_public_key` for verifying JWTs.")
-        if not Config.MONGO_URI:
-            raise ValueError("Missing `mongo_uri` for database connection.")
-        if not Config.MONGO_ADMIN_PASSWORD:
-            raise ValueError("Missing `mongo_admin_password`.")
-        if not Config.MONGO_USER_PASSWORD:
-            raise ValueError("Missing `mongo_user_password`.")
+
+        if Config.AUTH_DB_BACKEND == "mongo":
+            if not Config.MONGO_URI:
+                raise ValueError("Missing `mongo_uri`")
+            if not Config.MONGO_ADMIN_PASSWORD:
+                raise ValueError("Missing `mongo_admin_password`")
+            if not Config.MONGO_USER_PASSWORD:
+                raise ValueError("Missing `mongo_user_password`")
+
+        if Config.AUTH_DB_BACKEND == "postgres":
+            if not Config.POSTGRES_URI:
+                raise ValueError("Missing `postgres_uri`")
+            if not Config.POSTGRES_ADMIN_PASSWORD:
+                raise ValueError("Missing `postgres_admin_password`")
+            if not Config.POSTGRES_USER_PASSWORD:
+                raise ValueError("Missing `postgres_user_password`")
 
 
 # Validate configuration on startup

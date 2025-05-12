@@ -6,7 +6,7 @@ Before installing **JANUX**, ensure you have the following dependencies installe
 - pip or Poetry 
 - Git
 - Docker
-- MongoDB
+- MongoDB/PostgreSQL
 - Redis
 
 ---
@@ -81,7 +81,7 @@ docker compose version
 
 ## 🍃 MongoDB
 
-**MongoDB** is required for storing user and admin credentials. We highly recommend to run a **MongoDB** instance in Docker. 
+**MongoDB** is supported for storing user and admin credentials. We highly recommend to run a **MongoDB** instance in Docker. 
 
 ➊ Pull MongoDB docker image 
 
@@ -122,6 +122,61 @@ docker rm mongodb
 ```
 
 For a standalone installation please follow the [MongoDB Installation Guide](https://www.mongodb.com/docs/manual/installation/).
+
+## 🐘 PostgreSQL
+
+**PostgreSQL** is supported as the backend engine in JANUX as well. It stores user and admin credentials in a secure, relational schema.
+
+We recommend running **PostgreSQL** in a Docker container for development or testing.
+
+➊ Pull PostgreSQL docker image 
+
+```bash
+docker pull postgres:16
+```
+➋ Run PostgreSQL in a container
+
+=== "PostgreSQL on Docker"
+
+    To run a PostgreSQL instance in a container:
+
+    ```bash
+    docker run -d --name postgres \
+    -e POSTGRES_DB=users_db \
+    -e POSTGRES_USER=admin \
+    -e POSTGRES_PASSWORD=SuperAdminPassw0rd123! \
+    -p 5432:5432 \
+    postgres:16
+    ```
+
+=== "Persistent PostgreSQL on Docker"
+
+    **RECOMMENDED!** To persist data beyond container restarts, mount a local volume:
+
+    ```bash
+    docker run -d --name postgres \
+      -e POSTGRES_DB=users_db \
+      -e POSTGRES_USER=super_admin \
+      -e POSTGRES_PASSWORD=SuperAdminPassw0rd123! \
+      -v pg_data:/var/lib/postgresql/data \
+      -p 5432:5432 \
+      postgres:16
+    ```
+
+➌ Connect to PostgreSQL instance 
+
+```bash
+psql -h localhost -U admin -d users_db
+```
+
+Optionally, you can install [PGAdmin](https://www.pgadmin.org/download/)
+
+➍ Stop and remove PostgreSQL
+
+```bash
+docker stop postgres
+docker rm postgres
+```
 
 ## 🔥 Redis
 
@@ -180,6 +235,7 @@ Now that prerequisites are set, continue with **configuration**. 🎯
   [fastapi]: https://fastapi.tiangolo.com/
   [uvicorn]: https://www.uvicorn.org/
   [pymongo]: https://www.mongodb.com/docs/languages/python/pymongo-driver/current/
+  [PGAdmin]: https://www.pgadmin.org/download/
   [motor]: https://motor.readthedocs.io/en/stable/
   [requests]: https://pypi.org/project/requests/
   [Poetry]: https://python-poetry.org/docs/#installation

@@ -18,7 +18,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
 from janux_auth_gateway.models.admin_model import Admin
 from janux_auth_gateway.models.user_model import User
-from janux_auth_gateway.models.roles_model import UserRole
+from janux_auth_gateway.models.mongoDB.roles_model import UserRole
 from janux_auth_gateway.database.mongoDB import create_user_account
 
 

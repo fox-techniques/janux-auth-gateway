@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "JANUX-auth-gateway"
-version = "0.1.0"
+version = "2.0.0"
 description = "A modular OAuth2 and JWT authentication gateway for FastAPI microservices."
 authors = ["FOX Techniques <ali.nabbi@fox-techniques.com>"]
 license = "Apache-2.0"
@@ -27,6 +27,10 @@ coloredlogs = "^15.0.1"
 pyjwt = {extras = ["crypto"], version = "^2.10.1"}
 redis = "^5.2.1"
 argon2-cffi = "^23.1.0"
+sqlalchemy = "^2.0.40"
+asyncpg = "^0.30.0"
+alembic = "^1.15.2"
+hestia-logger = "^1.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"

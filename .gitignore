@@ -152,6 +152,15 @@ secrets/*
 !secrets/mongo_user_password.example
 !secrets/mongo_user_fullname.example
 !secrets/mongo_user_role.example
+!secrets/postgres_uri.example          
+!secrets/postgres_admin_email.example      
+!secrets/postgres_admin_password.example
+!secrets/postgres_admin_fullname.example
+!secrets/postgres_admin_role.example
+!secrets/postgres_user_email.example      
+!secrets/postgres_user_password.example
+!secrets/postgres_user_fullname.example
+!secrets/postgres_user_role.example
 
 # Spyder project settings
 .spyderproject
