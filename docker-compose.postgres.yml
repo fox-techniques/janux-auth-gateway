@@ -4,7 +4,7 @@ services:
     image: janux-auth-gateway:latest
     build: .
     ports:
-      - "8000:8000"
+      - 8000:8000
     depends_on:
       - postgres
       - redis
@@ -42,7 +42,7 @@ services:
     image: postgres:16
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - 5432:5432
     environment:
       POSTGRES_DB: users_db
       POSTGRES_USER_FILE: /run/secrets/postgres_admin_username
@@ -59,7 +59,7 @@ services:
     image: dpage/pgadmin4
     restart: unless-stopped
     ports:
-      - "8081:80"
+      - 8081:80
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@fox-techniques.com
       PGADMIN_DEFAULT_PASSWORD: Pa55w0rd!

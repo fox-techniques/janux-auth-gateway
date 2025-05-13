@@ -13,11 +13,11 @@ Author: FOX Techniques <ali.nabbi@fox-techniques.com>
 
 import pytest
 from pydantic import ValidationError
-from janux_auth_gateway.schemas.user_schema import (
-    UserBase,
-    UserCreate,
-    UserResponse,
-    UserLogin,
+from janux_auth_gateway.schemas.user_schema_mongo import (
+    UserBaseMongo as UserBase,
+    UserCreateMongo as UserCreate,
+    UserResponseMongo as UserResponse,
+    UserLoginMongo as UserLogin,
 )
 
 

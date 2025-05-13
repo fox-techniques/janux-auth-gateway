@@ -91,6 +91,7 @@ async def init_db(
             role=admin_role,
             full_name=admin_fullname,
         )
+
         await create_user_account(
             test_user_email,
             test_user_password,
@@ -170,21 +171,21 @@ async def create_user_account(
         logger.info(f"Test user account already exists.")
 
 
-async def authenticate_user(username: str, password: str) -> bool:
+async def authenticate_user(email: str, password: str) -> bool:
     """
     Authenticate a user by verifying their username and password.
 
     Args:
-        username (str): The user's email.
+        email (str): The user's email.
         password (str): The user's plain-text password.
 
     Returns:
         bool: True if authentication is successful, False otherwise.
     """
-    logger.info(f"Authenticating user: {username}")
+    logger.info(f"Authenticating user: {email}")
 
     try:
-        user = await username_exists(username)
+        user = await username_exists(email)
         if not user:
             logger.warning("User not found.")
             return False
@@ -200,21 +201,21 @@ async def authenticate_user(username: str, password: str) -> bool:
         return False
 
 
-async def authenticate_admin(username: str, password: str) -> bool:
+async def authenticate_admin(email: str, password: str) -> bool:
     """
     Authenticate an admin by verifying their username and password.
 
     Args:
-        username (str): The admin's email.
+        email (str): The admin's email.
         password (str): The admin's plain-text password.
 
     Returns:
         bool: True if authentication is successful, False otherwise.
     """
-    logger.info(f"Authenticating admin: {username}")
+    logger.info(f"Authenticating admin: {email}")
 
     try:
-        admin = await admin_username_exists(username)
+        admin = await admin_username_exists(email)
         if not admin:
             logger.warning("Admin not found.")
             return False
@@ -230,7 +231,7 @@ async def authenticate_admin(username: str, password: str) -> bool:
         return False
 
 
-async def username_exists(username: str) -> Optional[User]:
+async def username_exists(email: str) -> Optional[User]:
     """
     Check if a user exists in the database by email.
 
@@ -240,19 +241,19 @@ async def username_exists(username: str) -> Optional[User]:
     Returns:
         Optional[User]: The user object if found, else None.
     """
-    logger.info(f"Checking if user {username} exists.")
-    return await User.find_one(User.email == username)
+    logger.info(f"Checking if user {email} exists.")
+    return await User.find_one(User.email == email)
 
 
-async def admin_username_exists(username: str) -> Optional[Admin]:
+async def admin_username_exists(email: str) -> Optional[Admin]:
     """
     Check if an admin exists in the database by email.
 
     Args:
-        username (str): The admin's email.
+        email (str): The admin's email.
 
     Returns:
         Optional[Admin]: The admin object if found, else None.
     """
-    logger.info(f"Checking if admin {username} exists.")
-    return await Admin.find_one(Admin.email == username)
+    logger.info(f"Checking if admin {email} exists.")
+    return await Admin.find_one(Admin.email == email)
