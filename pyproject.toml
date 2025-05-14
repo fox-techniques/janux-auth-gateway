@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "JANUX-auth-gateway"
-version = "2.0.0"
+version = "2.0.1"
 description = "A modular OAuth2 and JWT authentication gateway for FastAPI microservices."
 authors = ["FOX Techniques <ali.nabbi@fox-techniques.com>"]
 license = "Apache-2.0"

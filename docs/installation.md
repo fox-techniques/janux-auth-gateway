@@ -89,97 +89,84 @@ pip install -e .
 
 ---
 
+## 🚢 Docker Swarm (RECOMMENEDED) 
 
-## 🐳 Docker
+### 🐘 PostgreSQL
 
-**JANUX** can be run as a Standalone Docker Container with MongoDB & Redis.
+Secrets ensure sensitive information (like private keys and database credentials) is securely stored. For multi-container setups including **PostgreSQL** and **Redis**: 
 
-➊ Check If **MongoDB/PostgreSQL & Redis** Are Already Running
+!!! danger "ATTENTION"
 
-Before running **JANUX**, ensure MongoDB and Redis are running.
+    Make sure you have **JANUX** configured with `.env`. If not, please go to the section [configuration](configuration.md).
+
+
+➊ **Grant permissions**
+
+First, first make sure permissions are set by running the following command in the terminal:
 
 ```bash
-docker ps
+chmod +x ./setup_docker_secret.sh
 ```
 
-✅ Expected Output:
+➋ **Configure Docker Secrets**
 
-|CONTAINER ID  | IMAGE        | STATUS       | PORTS |
-|---|---|---|---|
-|abc123xyz     | mongo:latest | Up 10 minutes| 27017->27017/tcp|
-|def456uvw     | redis:latest | Up 10 minutes| 6379->6379/tcp|
-
-???+ failure "FAILED"
-
-    🚨 If **MongoDB/PostgreSQL or Redis** is missing, start them manually:
-
-    ```bash
-    docker run -d --name mongodb -p 27017:27017 mongo:latest
-    docker run -d --name mongodb -p 27017:27017 mongo:latest
-    docker run -d --name redis -p 6379:6379 redis:latest
-    ```
-
-➋  Create a **Shared Docker Network**
-
-Since MongoDB and Redis are in bridge mode, but JANUX needs to communicate with them, we must create a shared network.
+Next, to create secrets, run the following command in the terminal:
 
 ```bash
-docker network create janux-network
-```
-
-✅ Expected Output:
-
-|NETWORK ID    | NAME           | DRIVER   | SCOPE|
-|---|---|---|---|
-|a1b2c3d4e5f6  | janux-network  | bridge   | local|
-
-✅ Connect MongoDB & Redis to janux-network
-
-```bash
-docker network connect janux-network mongodb
-docker network connect janux-network redis
-```
-
-✅ Now,** MongoDB and Redis** are reachable inside **janux-network.** To verify:
-
-```bash
-docker network inspect janux-network | grep '"Name":'
-```
-
-???+ failure "FAILED"
-
-    🚨 If MongoDB is missing from the network, rerun:
-
-    ```bash
-    docker network connect janux-network mongodb
-    ```
-
-➍ Build **JANUX Authentication Gateway** Docker Image
-
-Ensure the JANUX Docker image is up-to-date:
-```bash
-docker build -t janux-auth-gateway-standalone .
-```
-
-➎ Run **JANUX Standalone**
-
-Now, start **JANUX** inside **janux-network** and mount secrets correctly. Run **JANUX with Correct Networking & Secrets**
-
-```bash
-docker run -p 8000:8000 \
-  --network janux-network \
-  -e MONGO_URI="mongodb://mongodb:27017/users_db" \
-  -e REDIS_HOST="redis" \
-  -e REDIS_PORT="6379" \
-  -v $(pwd)/secrets:/run/secrets:ro \
-  janux-auth-gateway
+./setup_docker_secret.sh postgres
 ```
 
 
+➌ **Deploy the Stack**
+
+Run:
+
+```bash
+./deploy_janux_stack.sh docker-compose.postgres.yml
+
+```
+
+This will:
+
+- Deploy **JANUX Authentication Gateway**
+- Deploy **PostgreSQL** and **Redis** as dependencies
+- Ensure all services are properly networked
+
+➎ **Check If Services Are Running**
+
+Verify that all services are running with:
+
+```bash
+docker service ls
+```
+
+
+➏ **Test the API**
+
+Once all services are running, check the API health:
+
+```bash
+curl http://localhost:8000/health
+```
+
+✅ *Expected Output:*
+
+```json
+{"status": "healthy"}
+```
+
+➐ **Stop & Remove the Stack**
+
+If you need to stop the application, run:
+
+```bash
+docker stack rm janux-stack
+
+```
 
 ---
 
-## 🚢 Docker Swarm (RECOMMENEDED) - MongoDB
+### 🌱 MongoDB
 
 Secrets ensure sensitive information (like private keys and database credentials) is securely stored. For multi-container setups including **MongoDB** and **Redis**: 
 
@@ -254,80 +241,6 @@ docker stack rm janux-stack
 
 ---
 
-## 🚢 Docker Swarm (RECOMMENEDED) - PostgreSQL
-
-Secrets ensure sensitive information (like private keys and database credentials) is securely stored. For multi-container setups including **PostgreSQL** and **Redis**: 
-
-!!! danger "ATTENTION"
-
-    Make sure you have **JANUX** configured with `.env`. If not, please go to the section [configuration](configuration.md).
-
-
-➊ **Grant permissions**
-
-First, first make sure permissions are set by running the following command in the terminal:
-
-```bash
-chmod +x ./setup_docker_secret.sh
-```
-
-➋ **Configure Docker Secrets**
-
-Next, to create secrets, run the following command in the terminal:
-
-```bash
-./setup_docker_secret.sh postgres
-```
-
-
-➌ **Deploy the Stack**
-
-Run:
-
-```bash
-./deploy_janux_stack.sh docker-compose.postgres.yml
-
-```
-
-This will:
-
-- Deploy **JANUX Authentication Gateway**
-- Deploy **PostgreSQL** and **Redis** as dependencies
-- Ensure all services are properly networked
-
-➎ **Check If Services Are Running**
-
-Verify that all services are running with:
-
-```bash
-docker service ls
-```
-
-
-➏ **Test the API**
-
-Once all services are running, check the API health:
-
-```bash
-curl http://localhost:8000/health
-```
-
-✅ *Expected Output:*
-
-```json
-{"status": "healthy"}
-```
-
-➐ **Stop & Remove the Stack**
-
-If you need to stop the application, run:
-
-```bash
-docker stack rm janux-stack
-
-```
-
----
 
 🤩 **CONGRAGULATIONS!** Continue to the **usage**. Let's keep going...🚀
 

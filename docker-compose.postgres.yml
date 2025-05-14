@@ -40,7 +40,6 @@ services:
 
   postgres:
     image: postgres:16
-    restart: unless-stopped
     ports:
       - 5432:5432
     environment:
@@ -51,13 +50,13 @@ services:
       - postgres_admin_username
       - postgres_admin_password
     volumes:
+      - ./init/init.sql:/docker-entrypoint-initdb.d/init..sql:ro
       - postgres-data:/var/lib/postgresql/data
     networks:
       - janux-network
 
   pgadmin:
     image: dpage/pgadmin4
-    restart: unless-stopped
     ports:
       - 8081:80
     environment:
@@ -70,7 +69,6 @@ services:
 
   redis:
     image: redis:latest
-    restart: unless-stopped
     networks:
       - janux-network
 

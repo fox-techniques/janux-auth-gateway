@@ -2,7 +2,6 @@
 services:
   janux-auth-gateway:
     image: janux-auth-gateway:latest
-    build: .
     ports:
       - "8000:8000"
     depends_on:
@@ -38,7 +37,6 @@ services:
 
   mongodb:
     image: mongo:6.0
-    restart: unless-stopped
     volumes:
       - mongo-data:/data/db
     ports:
@@ -50,7 +48,6 @@ services:
 
   redis:
     image: redis:latest
-    restart: unless-stopped
     networks:
       - janux-network
 

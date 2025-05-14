@@ -137,40 +137,42 @@ class Config:
     ], "AUTH_DB_BACKEND must be 'mongo' or 'postgres'"
 
     # ---
-    # 🌱 MongoDB
-    MONGO_URI = _read_secret("mongo_uri")
-    MONGO_DATABASE_NAME = _get_env_variable("MONGO_DATABASE_NAME", "users_db")
 
-    # 👤 MongoDB Initial Admin Credentials
-    MONGO_ADMIN_EMAIL = _read_secret("mongo_admin_email")
-    MONGO_ADMIN_PASSWORD = _read_secret("mongo_admin_password")
-    MONGO_ADMIN_FULLNAME = _read_secret("mongo_admin_fullname")
-    MONGO_ADMIN_ROLE = _read_secret("mongo_admin_role")
+    if AUTH_DB_BACKEND == "mongo":
+        # 🌱 MongoDB
+        MONGO_URI = _read_secret("mongo_uri")
+        MONGO_DATABASE_NAME = _get_env_variable("MONGO_DATABASE_NAME", "users_db")
 
-    # 👤 MongoDB Initial User Credentials
-    MONGO_USER_EMAIL = _read_secret("mongo_user_email")
-    MONGO_USER_PASSWORD = _read_secret("mongo_user_password")
-    MONGO_USER_FULLNAME = _read_secret("mongo_user_fullname")
-    MONGO_USER_ROLE = _read_secret("mongo_user_role")
+        # 👤 MongoDB Initial Admin Credentials
+        MONGO_ADMIN_EMAIL = _read_secret("mongo_admin_email")
+        MONGO_ADMIN_PASSWORD = _read_secret("mongo_admin_password")
+        MONGO_ADMIN_FULLNAME = _read_secret("mongo_admin_fullname")
+        MONGO_ADMIN_ROLE = _read_secret("mongo_admin_role")
 
-    # ---
-    # 🐘 PostgreSQL
-    POSTGRES_URI = _read_secret("postgres_uri")
-    POSTGRES_DATABASE_NAME = _get_env_variable("POSTGRES_DATABASE_NAME", "users_db")
-    POSTGRES_ECHO = bool(_get_env_variable("POSTGRES_ECHO", False))
-    POSTGRES_POOL_SIZE = int(_get_env_variable("POSTGRES_POOL_SIZE", 5))
+        # 👤 MongoDB Initial User Credentials
+        MONGO_USER_EMAIL = _read_secret("mongo_user_email")
+        MONGO_USER_PASSWORD = _read_secret("mongo_user_password")
+        MONGO_USER_FULLNAME = _read_secret("mongo_user_fullname")
+        MONGO_USER_ROLE = _read_secret("mongo_user_role")
 
-    # 👤 PostgreSQL Initial Admin Credentials
-    POSTGRES_ADMIN_USERNAME = _read_secret("postgres_admin_username")
-    POSTGRES_ADMIN_PASSWORD = _read_secret("postgres_admin_password")
-    POSTGRES_ADMIN_FULLNAME = _read_secret("postgres_admin_fullname")
-    POSTGRES_ADMIN_ROLE = _read_secret("postgres_admin_role")
+    elif AUTH_DB_BACKEND == "postgres":
+        # 🐘 PostgreSQL
+        POSTGRES_URI = _read_secret("postgres_uri")
+        POSTGRES_DATABASE_NAME = _get_env_variable("POSTGRES_DATABASE_NAME", "users_db")
+        POSTGRES_ECHO = bool(_get_env_variable("POSTGRES_ECHO", False))
+        POSTGRES_POOL_SIZE = int(_get_env_variable("POSTGRES_POOL_SIZE", 5))
 
-    # 👤 PostgreSQL Initial User Credentials
-    POSTGRES_USER_USERNAME = _read_secret("postgres_user_username")
-    POSTGRES_USER_PASSWORD = _read_secret("postgres_user_password")
-    POSTGRES_USER_FULLNAME = _read_secret("postgres_user_fullname")
-    POSTGRES_USER_ROLE = _read_secret("postgres_user_role")
+        # 👤 PostgreSQL Initial Admin Credentials
+        POSTGRES_ADMIN_USERNAME = _read_secret("postgres_admin_username")
+        POSTGRES_ADMIN_PASSWORD = _read_secret("postgres_admin_password")
+        POSTGRES_ADMIN_FULLNAME = _read_secret("postgres_admin_fullname")
+        POSTGRES_ADMIN_ROLE = _read_secret("postgres_admin_role")
+
+        # 👤 PostgreSQL Initial User Credentials
+        POSTGRES_USER_USERNAME = _read_secret("postgres_user_username")
+        POSTGRES_USER_PASSWORD = _read_secret("postgres_user_password")
+        POSTGRES_USER_FULLNAME = _read_secret("postgres_user_fullname")
+        POSTGRES_USER_ROLE = _read_secret("postgres_user_role")
 
     # 🔄 Redis Configuration
     REDIS_HOST = _get_env_variable("REDIS_HOST", "localhost")

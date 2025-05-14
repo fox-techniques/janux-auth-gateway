@@ -20,6 +20,7 @@ title: JANUX Authentication Gateway
 - 🚀 **FastAPI-based** – Asynchronous, high-performance authentication.
 - 🔑 **JWT Authentication & Token Management** – Secure access and refresh tokens.
 - 🏷️ **Role-Based Access Control (RBAC)** – Admins, users, and fine-grained permissions.
+- 🐘 **PostgreSQL via SQLAlchemy** – User and admin management with PostgreSQL. 
 - 🗄️ **MongoDB with Beanie ODM** – Flexible user and admin management.
 - 🔐 **Secure Password Hashing** – Uses Argon2 & Bcrypt for industry-leading security.
 - 📜 **Cryptographic Key Support** – RSA, Ed25519, and ECDSA for secure key management.
